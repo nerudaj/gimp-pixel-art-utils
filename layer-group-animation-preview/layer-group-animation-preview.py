@@ -7,7 +7,6 @@ import gobject
 
 # global state
 window = None
-window_box = None
 display_box = None
 preview_box = None
 layers_list = None
@@ -30,11 +29,13 @@ def create_preview_window():
     pdb.gimp_message("create_preview_window start")
 
     global window
-    global window_box
     global current_frame
     global layers_list
     global display_box
     global fps
+
+    horizontal_spacing = 10
+    vertical_spacing = 0
 
     window = gtk.Window()
     window.set_title("Animation preview")
@@ -43,31 +44,38 @@ def create_preview_window():
     window.add(window_box)
 
     display_box = gtk.HBox()
-    window_box.pack_start(display_box, True, True, 0)
+    window_box.pack_start(display_box, True, True, vertical_spacing)
 
-    button_box = gtk.HBox()
-    window_box.pack_start(button_box, True, True, 0)
+    # FPS controls
+    fps_controls_box = gtk.HBox()
+    window_box.pack_start(fps_controls_box, True, True, vertical_spacing)
 
     fps_entry_label = gtk.Label("FPS")
-    button_box.pack_start(fps_entry_label, True, True, 0)
+    fps_controls_box.pack_start(fps_entry_label, True, True, horizontal_spacing)
 
     fps_entry = gtk.Entry()
     fps_entry.set_text("{}".format(fps))
-    button_box.pack_start(fps_entry, True, True, 0)
+    fps_controls_box.pack_start(fps_entry, True, True, horizontal_spacing)
 
     btn = gtk.Button()
     btn.set_label("Update")
     btn.connect("clicked", update_fps, fps_entry)
-    button_box.pack_start(btn, True, True, 0)
+    fps_controls_box.pack_start(btn, True, True, horizontal_spacing)
 
-    # ComboBox for selecting available layers with animations
+    # Layer group selection
+    layer_select_box = gtk.HBox()
+    window_box.pack_start(layer_select_box, True, True, vertical_spacing)
+
+    layer_combo_label = gtk.Label("Select layer group")
+    layer_select_box.pack_start(layer_combo_label, True, True, horizontal_spacing)
+
     combox = gtk.combo_box_new_text()
     combox.connect("changed", active_layer_changed)
     for layer in layers_list:
         pdb.gimp_message(layer.name)
         combox.append_text(layer.name)
     combox.set_active(0)
-    button_box.pack_start(combox, True, True, 0)
+    layer_select_box.pack_start(combox, True, True, horizontal_spacing)
 
     window.show_all()
     update_preview()
