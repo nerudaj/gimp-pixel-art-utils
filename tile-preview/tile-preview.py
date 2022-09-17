@@ -100,6 +100,7 @@ def build_gui():
     window.connect('destroy',  close_preview_window)
     window_box = gtk.VBox()
     window.add(window_box)
+    window.set_keep_above(True)
 
     global display_box
     display_box = gtk.HBox();

@@ -42,6 +42,7 @@ def create_preview_window():
     window.connect('destroy',  close_preview_window)
     window_box = gtk.VBox()
     window.add(window_box)
+    window.set_keep_above(True)
 
     display_box = gtk.HBox()
     window_box.pack_start(display_box, True, True, vertical_spacing)
