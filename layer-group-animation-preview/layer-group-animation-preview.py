@@ -152,7 +152,7 @@ def run_plugin_function(_image, _drawable):
 
 register(
           "run_plugin_function",
-          "blurb",
+          "Previews animations stored in distinct layer groups",
           "Previews animations stored in distinct layer groups",
           "doomista",
           "Apache 2 license",
@@ -164,6 +164,6 @@ register(
               (PF_DRAWABLE, "drawable", "Input drawable", None),
           ],
           [],
-          run_plugin_function, menu="<Image>/Windows")
+          run_plugin_function, menu="<Image>/Tools/Pixel Art")
 main()
 
