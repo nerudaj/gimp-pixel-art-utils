@@ -26,11 +26,9 @@ The nature of live preview itself is a little hacky, so it updates once per seco
 
 ## tilesetize
 
-Plugin for exporting image containing tiles into tileset. It allows you to see offset from borders of image, spacing between tiles and order of export.
+Plugin for exporting image containing tiles into tileset. It allows you to set offset from borders of the image, spacing between tiles and order of export.
 
-It also automatically exports JSON annotations so your application can always know how the tiles are laid out even if you change your settings. The exported JSON will always have the same name as exported image, plus json extension (ie.: `test.png.json`).
-
-Most of the JSON should be self explanatory, but here's an image explaining some of the more cryptic ones:
+It also automatically exports JSON annotations so your application can always know how the tiles are laid out even if you change your settings. The exported JSON will always have the same name as exported image, plus `.json` extension (ie.: `test.png.json`). Most of the JSON should be self explanatory, and following image should help you understand the rest.
 
 ![Tilesitize annotations](docs/tilesetize.png)
 
