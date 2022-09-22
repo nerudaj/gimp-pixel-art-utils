@@ -11,6 +11,7 @@ This repo provides a set of plugins for more convenient pixel art work in GIMP. 
 ## List of plugins
 
  * [Tile preview](#tile-preview)
+ * [Tilesetize](#tilesetize)
  * [Layer Group Animation Preview](#layer-group-animation-preview)
 
 ## tile-preview
@@ -22,6 +23,16 @@ The nature of live preview itself is a little hacky, so it updates once per seco
 ![Tile preview 1](docs/tile_preview1.png)
 
 ![Tile preview 2](docs/tile_preview2.png)
+
+## tilesetize
+
+Plugin for exporting image containing tiles into tileset. It allows you to see offset from borders of image, spacing between tiles and order of export.
+
+It also automatically exports JSON annotations so your application can always know how the tiles are laid out even if you change your settings. The exported JSON will always have the same name as exported image, plus json extension (ie.: `test.png.json`).
+
+Most of the JSON should be self explanatory, but here's an image explaining some of the more cryptic ones:
+
+![Tilesitize annotations](docs/tilesetize.png)
 
 # layer-group-animation-preview
 
