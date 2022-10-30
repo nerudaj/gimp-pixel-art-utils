@@ -44,8 +44,10 @@ Animations are played in reverse, to maintain consistent behaviour with GIF expo
 
 # spritesheetize
 
-Plugin for exporting animations into a spritesheet image. It also exports JSON annotations for that spritesheet so you can load it programatically and not rely on concrete number of frames or positions of elements (as those can easily change).
+Plugin for exporting animations into a spritesheet image. It also exports JSON annotations for that spritesheet so you can load it programatically and not rely on concrete number of frames or positions of elements (as those can easily change). The exported JSON will always have the same name as exported image, plus `.json` extension (ie.: `test.png.json`).
 
-It uses very barebones fitting algorithm so the resulting spritesheet is smaller than one from tilemancer.
+Your project needs to be organized in the same way [animation-preview](#animation-preview) plugin works. Each project can have any number of animation clips (called `states` in the JSON). Each clip has to be a top-level Layer group. Layer group can contain any number of layers/sub-groups (=frames). Frames are exported in reverse - first frame in the group is the last frame of the animation. This behaviour is consistent with built in GIF export in GIMP.
+
+The plugin uses very barebones fitting algorithm so the resulting spritesheet is smaller than one from tilemancer.
 
 > NOTE: Keep in mind that this plugin might toggle some of your layers visible, so it can perform the export.
