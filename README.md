@@ -44,4 +44,8 @@ Animations are played in reverse, to maintain consistent behaviour with GIF expo
 
 # spritesheetize
 
-> NOTE: Keep in mind that this plugin toggles all of your layers visible, so it can perform the export.
+Plugin for exporting animations into a spritesheet image. It also exports JSON annotations for that spritesheet so you can load it programatically and not rely on concrete number of frames or positions of elements (as those can easily change).
+
+It uses very barebones fitting algorithm so the resulting spritesheet is smaller than one from tilemancer.
+
+> NOTE: Keep in mind that this plugin might toggle some of your layers visible, so it can perform the export.
