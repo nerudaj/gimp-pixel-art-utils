@@ -42,8 +42,8 @@ def export_tileset(filename, offset, spacing, _image, invert_order):
     if n_tiles_per_row % n_layers != 0:
         n_rows += 1 # There are some extra tiles
 
-    output_width = 2 * spacing + n_tiles_per_row * _image.width + (n_tiles_per_row - 1) * offset
-    output_height = 2 * spacing + n_rows * _image.height + (n_rows - 1) * offset
+    output_width = n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2
+    output_height = n_rows * _image.height + spacing * (n_rows - 1) + offset * 2
 
     img = pdb.gimp_image_new(
         output_width,
@@ -61,8 +61,8 @@ def export_tileset(filename, offset, spacing, _image, invert_order):
         pdb.gimp_layer_add_alpha(temp_layer)
         img.insert_layer(temp_layer)
         temp_layer.translate(
-            spacing + x * (_image.width + offset),
-            spacing + y * (_image.height + offset))
+            offset + x * (_image.width + spacing),
+            offset + y * (_image.height + spacing))
 
         x += 1
         if x == n_tiles_per_row:

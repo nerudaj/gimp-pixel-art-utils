@@ -8,11 +8,88 @@ import atk
 import math
 import json
 
+def tuple_second_elem(lt):
+    return lt[1];
+
+def pack_layers(layers, frame_sum):
+    pdb.gimp_message("pack_layers({}, {})"
+        .format(layers, frame_sum))
+    layers = sorted(layers, key=tuple_second_elem, reverse=True)
+
+    wrap_count = math.sqrt(frame_sum)
+    if tuple_second_elem(layers[0]) > wrap_count:
+        wrap_count = tuple_second_elem(layers[0])
+
+    rows = [ [] ]
+    current_row_frame_sum = 0
+    for lt in layers:
+        if current_row_frame_sum + tuple_second_elem(lt) > wrap_count:
+            current_row_frame_sum = tuple_second_elem(lt)
+            rows.append([lt])
+        else:
+            current_row_frame_sum += tuple_second_elem(lt)
+            rows[-1].append(lt)
+
+    return rows
+
+def compute_packed_layers(image):
+    pdb.gimp_message("compute_packed_layers({})"
+        .format(image))
+    frame_sum = 0 # total number of frames that will be in spritesheet
+    layer_refs = []
+    for layer in image.layers:
+        frame_count = len(layer.children)
+        if frame_count = 0:
+            continue
+
+        layer_refs.append((layer, frame_count))
+        frame_sum += frame_count
+
+    return pack_layers(layer_refs, frame_sum)
+
 def export_annotations(filename, offset, spacing, tile_width, tile_height, count, items_per_row, nrows):
     pdb.gimp_message("export_annotations({}, {}, {})".format(filename, offset, spacing))
 
 def export_spritesheet(filename, offset, spacing, image):
     pdb.gimp_message("export_spritesheet({}, {}, {})".format(filename, offset, spacing))
+    packed_layers = compute_packed_layers(image)
+    pdb.gimp_message("has packed")
+    
+    max_frames_per_row = 0
+    for lt in packed_layers[0]:
+        max_frames_per_row += tuple_second_elem(lt)
+    row_count = len(packed_layers)
+    pdb.gimp_message("has max and count")
+
+    output_width = image.width * max_frames_per_row + spacing * (1 - max_frames_per_row) + offset * 2
+    output_height = image.height * row_count + spacing * (1 - row_count) + offset * 2
+    pdb.gimp_message("Image output dimensions: {}x{}"
+        .format(output_width, output_height))
+    
+    export_img = pdb.gimp_image_new(
+        output_width,
+        output_height,
+        image.base_type)
+
+    row = 0
+    col = 0
+    for row in packed_layers:
+        for lt in row:
+            for x in range(col, col + lt[1]):
+                temp_layer = pdb.gimp_layer_new_from_drawable(
+                    lt[0], export_img)
+                pdb.gimp_layer_add_alpha(temp_layer)
+                img.insert_layer(temp_layer)
+                temp_layer.translate(
+                    offset + x *(image.width + spacing),
+                    offset + row * (image.height + spacing))
+            col += lt[1]
+        row += 1
+    
+    result = pdb.gimp_iamge_merge_visible_layers(img, 0)
+    pdb.gimp_file_save(img, result, filename, filename)
+    # TODO: export annotations
+    close_plugin_window(0)
 
 def pick_file(widget, offset_input, spacing_input, _image):
     save_dlg = gtk.FileChooserDialog(
