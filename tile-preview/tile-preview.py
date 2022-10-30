@@ -148,7 +148,7 @@ def run_tile_preview_plugin_function(_image, _drawable):
     image_ref = _image
     
     global zoom_level
-    zoom_level = 128 / image_ref.active_layer.width 
+    zoom_level = 128.0 / image_ref.active_layer.width 
     
     build_gui()
     update_preview()

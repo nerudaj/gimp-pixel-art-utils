@@ -9,7 +9,6 @@ class Playback:
     def __init__(self, frame_count):
         self.fps = 1
         self.playing = False
-        self.dirty = True
         self.frame_index = 0
         self.frame_count = frame_count
 
@@ -23,21 +22,31 @@ class Playback:
         self.frame_index += 1
         if self.frame_index == self.frame_count:
             self.frame_index = 0
-        self.dirty = True
 
     def prev_frame(self):
         self.frame_index -= 1
         if self.frame_index < 0:
             self.frame_index = self.frame_count - 1
-        self.dirty = True
 
     def update_fps(self, fps):
         self.fps = fps
 
-    def update(self):
-        if self.playing:
-            self.next_frame()
-        self.dirty = False
+# GUI HELPERS
+def create_label(text, parent, spacing):
+    label = gtk.Label(text)
+    parent.pack_start(label, True, True, spacing)
+    return label
+
+def create_button(label, box, spacing):
+    btn = gtk.Button()
+    btn.set_label(label)
+    box.pack_start(btn, True, True, spacing)
+    return btn
+
+def create_hbox(parent, grow_vertically, spacing):
+    box = gtk.HBox()
+    parent.pack_start(box, grow_vertically, True, spacing)
+    return box
 
 # global state
 window = None
@@ -47,8 +56,8 @@ layers_list = None
 active_layer = None
 current_frame = None
 frame_index = 0
-fps = 16
 playback = None
+zoom_level = 1.0
 
 def update_layers_info(image):
     global layers_list
@@ -60,14 +69,7 @@ def update_layers_info(image):
             # pdb.gimp_message("Adding layer '{}'".format(layer.name))
             layers_list.append(layer)
 
-def create_button(label, box, spacing):
-    btn = gtk.Button()
-    btn.set_label(label)
-    box.pack_start(btn, True, True, spacing)
-    return btn
-
 def update_fps(widget, entry):
-    global fps
     global playback
 
     fps_text = entry.get_text()
@@ -77,6 +79,7 @@ def update_fps(widget, entry):
 def start_playback(widget):
     global playback
     playback.start()
+    update_preview()
 
 def stop_playback(widget):
     global playback
@@ -85,10 +88,22 @@ def stop_playback(widget):
 def prev_frame(widget):
     global playback
     playback.prev_frame()
+    update_preview(force=True)
 
 def next_frame(widget):
     global playback
     playback.next_frame()
+    update_preview(force=True)
+
+def zoom_in(widget):
+    global zoom_level
+    zoom_level *= 2.0
+    update_preview(force=True)
+
+def zoom_out(widget):
+    global zoom_level
+    zoom_level /= 2.0
+    update_preview(force=True)
 
 def create_preview_window():
     pdb.gimp_message("create_preview_window start")
@@ -97,7 +112,6 @@ def create_preview_window():
     global current_frame
     global layers_list
     global display_box
-    global fps
 
     horizontal_spacing = 10
     vertical_spacing = 0
@@ -107,35 +121,42 @@ def create_preview_window():
     window.connect('destroy',  close_preview_window)
     window_box = gtk.VBox()
     window.add(window_box)
+    window.set_keep_above(True)
 
-    display_box = gtk.HBox()
-    window_box.pack_start(display_box, True, True, vertical_spacing)
+    display_box = create_hbox(window_box, True, vertical_spacing)
 
-    # Playback controls
-    playback_box = gtk.HBox();
-    window_box.pack_start(playback_box, False, True, vertical_spacing)
+    # Playback & zoom controls
+    playback_box = create_hbox(window_box, False, vertical_spacing)
     
     play_btn = create_button("Play", playback_box, horizontal_spacing)
     play_btn.connect("clicked", start_playback)
     
-    stop_btn = create_button("Stop", playback_box, horizontal_spacing)  
+    stop_btn = create_button("Stop", playback_box, horizontal_spacing)
     stop_btn.connect("clicked", stop_playback)
 
     prev_btn = create_button("Prev", playback_box, horizontal_spacing)
     prev_btn.connect("clicked", prev_frame)
 
     next_btn = create_button("Next", playback_box, horizontal_spacing)
-    prev_btn.connect("clicked", next_frame)
+    next_btn.connect("clicked", next_frame)
+
+    # Zoom controls
+    zoom_box = create_hbox(window_box, False, vertical_spacing)
+    create_label("Zoom", zoom_box, horizontal_spacing)
+
+    zoom_out_btn = create_button("-", zoom_box, horizontal_spacing)
+    zoom_out_btn.connect("clicked", zoom_out)
+    
+    zoom_in_btn = create_button("+", zoom_box, horizontal_spacing)
+    zoom_in_btn.connect("clicked", zoom_in)
 
     # FPS controls
-    fps_controls_box = gtk.HBox()
-    window_box.pack_start(fps_controls_box, False, True, vertical_spacing)
+    fps_controls_box = create_hbox(window_box, False, vertical_spacing)
+    create_label("FPS", fps_controls_box, horizontal_spacing)
 
-    fps_entry_label = gtk.Label("FPS")
-    fps_controls_box.pack_start(fps_entry_label, True, True, horizontal_spacing)
-
+    DEFAULT_FPS = 16
     fps_entry = gtk.Entry()
-    fps_entry.set_text("{}".format(fps))
+    fps_entry.set_text("{}".format(DEFAULT_FPS))
     fps_controls_box.pack_start(fps_entry, True, True, horizontal_spacing)
 
     btn = gtk.Button()
@@ -144,16 +165,12 @@ def create_preview_window():
     fps_controls_box.pack_start(btn, True, True, horizontal_spacing)
 
     # Layer group selection
-    layer_select_box = gtk.HBox()
-    window_box.pack_start(layer_select_box, False, True, vertical_spacing)
-
-    layer_combo_label = gtk.Label("Group to play")
-    layer_select_box.pack_start(layer_combo_label, True, True, horizontal_spacing)
+    layer_select_box = create_hbox(window_box, False, vertical_spacing)
+    create_label("Group to play", layer_select_box, horizontal_spacing)
 
     combox = gtk.combo_box_new_text()
     combox.connect("changed", active_layer_changed, fps_entry)
     for layer in layers_list:
-        # pdb.gimp_message(layer.name)
         combox.append_text(layer.name)
     combox.set_active(0)
     layer_select_box.pack_start(combox, True, True, horizontal_spacing)
@@ -175,11 +192,13 @@ def active_layer_changed(combo, fps_entry):
             active_layer = layer
             playback = Playback(len(active_layer.children))
             update_fps(None, fps_entry)
-    
-    pdb.gimp_message("Is playback none: {}".format(playback is None))
 
-def get_scaled_layer(layer, scale):
-    global image_ref
+    global zoom_level
+    zoom_level = 128.0 / active_layer.width
+
+    update_preview(force=True)
+
+def get_scaled_layer(layer, image_ref, scale):
     temp_img = pdb.gimp_image_new(
         layer.width,
         layer.height,
@@ -198,34 +217,42 @@ def get_scaled_layer(layer, scale):
     
     return temp_layer
 
-def update_preview():
-    pdb.gimp_message("update_preview")
+def update_preview(force=False):
+    # pdb.gimp_message("update_preview")
     
     global playback
     global current_frame
     global active_layer
 
-    if not (playback.playing or playback.dirty):
-        gobject.timeout_add(1000 / playback.fps, update_preview)
+    # If force == True & playback.playing == True then forced update can be skipped
+    # because there is one scheduled
+    # If both are false then there is nothing to update
+    if force == playback.playing:
         return
 
-    playback.update()
-    
+    if playback.playing:
+        playback.next_frame()
+
     active_layer_len = len(active_layer.children)
     current_frame = active_layer.children[active_layer_len - playback.frame_index - 1]
-    
+
     global display_box
     global preview_box
     global window
-    
+
     if preview_box is not None:
         display_box.remove(preview_box)
 
+    global zoom_level
+    global image_ref
+
     preview_box = gimpui.DrawablePreview(
-        get_scaled_layer(current_frame, 10))
+        get_scaled_layer(current_frame, image_ref, zoom_level))
     display_box.pack_start(preview_box, True, True, 0)
     window.show_all()
-    gobject.timeout_add(1000 / playback.fps, update_preview)
+
+    if playback.playing:
+        gobject.timeout_add(1000 / playback.fps, update_preview)
 
 def close_preview_window(ret):
     pdb.gimp_message("quitting Animation preview plugin")
@@ -254,7 +281,7 @@ register(
           "doomista",
           "Apache 2 license",
           "2022",
-          "Layer Group Animation Preview",
+          "Animation Preview",
           "*",
           [
               (PF_IMAGE, "image", "Input image", None),

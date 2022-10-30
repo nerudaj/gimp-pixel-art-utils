@@ -12,7 +12,7 @@ This repo provides a set of plugins for more convenient pixel art work in GIMP. 
 
  * [Tile preview](#tile-preview)
  * [Tilesetize](#tilesetize)
- * [Layer Group Animation Preview](#layer-group-animation-preview)
+ * [Animation Preview](#animation-preview)
 
 ## tile-preview
 
@@ -32,9 +32,11 @@ It also automatically exports JSON annotations so your application can always kn
 
 ![Tilesitize annotations](docs/tilesetize.png)
 
-# layer-group-animation-preview
+# animation-preview
 
-Plugin for previewing animations stored in a layer group. This plugin is meant for pixel artists who create spritesheets (or tileset) for the game and works well in conjunction with [tilemancer](https://github.com/nerudaj/tilemancer)
+Plugin for previewing animations stored in a layer group. It allows you to have multiple animations within a single gimp project, each one stored in a distinct layer group (only top level layer groups are indexed for animations, so you can use layer groups on lower levels to perform blending operations). Use [spritesheetize](#spritesheetize) to export your animations to annotated spritesheet so you can use them in a game.
+
+![Preview animations](docs/animation_preview.gif)
 
 ## How to use
 
