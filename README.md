@@ -32,6 +32,8 @@ It also automatically exports JSON annotations so your application can always kn
 
 ![Tilesitize annotations](docs/tilesetize.png)
 
+> NOTE: Keep in mind that this plugin toggles all of your layers visible, so it can perform the export.
+
 # animation-preview
 
 Plugin for previewing animations stored in a layer group. It allows you to have multiple animations within a single gimp project, each one stored in a distinct layer group (only top level layer groups are indexed for animations, so you can use layer groups on lower levels to perform blending operations). Use [spritesheetize](#spritesheetize) to export your animations to annotated spritesheet so you can use them in a game.
@@ -39,3 +41,7 @@ Plugin for previewing animations stored in a layer group. It allows you to have 
 Animations are played in reverse, to maintain consistent behaviour with GIF exports in Gimp. That means that first layer withing your layer group (=animation clip) is the last frame of the animation.
 
 ![Preview animations](docs/animation_preview.gif)
+
+# spritesheetize
+
+> NOTE: Keep in mind that this plugin toggles all of your layers visible, so it can perform the export.

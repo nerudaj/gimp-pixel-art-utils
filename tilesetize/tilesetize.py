@@ -59,6 +59,7 @@ def export_tileset(filename, offset, spacing, _image, invert_order):
         temp_layer = pdb.gimp_layer_new_from_drawable(
             layer, img)
         pdb.gimp_layer_add_alpha(temp_layer)
+        pdb.gimp_drawable_set_visible(temp_layer, True)
         img.insert_layer(temp_layer)
         temp_layer.translate(
             offset + x * (_image.width + spacing),

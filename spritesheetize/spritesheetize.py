@@ -39,7 +39,7 @@ def compute_packed_layers(image):
     layer_refs = []
     for layer in image.layers:
         frame_count = len(layer.children)
-        if frame_count = 0:
+        if frame_count == 0:
             continue
 
         layer_refs.append((layer, frame_count))
@@ -47,19 +47,59 @@ def compute_packed_layers(image):
 
     return pack_layers(layer_refs, frame_sum)
 
-def export_annotations(filename, offset, spacing, tile_width, tile_height, count, items_per_row, nrows):
+def export_annotations(filename, offset, spacing, frame_width, frame_height, packed_layers):
     pdb.gimp_message("export_annotations({}, {}, {})".format(filename, offset, spacing))
+
+    annotation = {
+        "defaults": {
+            "frame": {
+                "width": frame_width,
+                "height": frame_height
+            },
+            "spacing": {
+                "horizontal": spacing,
+                "vertical": spacing
+            }
+        },
+        "states": []
+    }
+
+    pdb.gimp_message("base json composed")
+
+    row = 0
+    col = 0
+    for packed_row in packed_layers:
+        for state in packed_row:
+            pdb.gimp_message(state)
+            annotation["states"].append({
+                "name": state[0].name,
+                "bounds": {
+                    "left": offset + (frame_width + spacing) * col,
+                    "top": offset + (frame_height + spacing) * row,
+                    "width": frame_width * state[1] + spacing * (state[1] - 1),
+                    "height": frame_height
+                },
+                "nframes": state[1]
+            })
+            col += state[1]
+        col = 0
+        row += 1
+
+    pdb.gimp_message("states added")
+
+    filename = filename + ".json"
+    fp = open(filename, "wt")
+    json.dump(annotation, fp)
+    fp.close()
 
 def export_spritesheet(filename, offset, spacing, image):
     pdb.gimp_message("export_spritesheet({}, {}, {})".format(filename, offset, spacing))
     packed_layers = compute_packed_layers(image)
-    pdb.gimp_message("has packed")
     
     max_frames_per_row = 0
     for lt in packed_layers[0]:
         max_frames_per_row += tuple_second_elem(lt)
     row_count = len(packed_layers)
-    pdb.gimp_message("has max and count")
 
     output_width = image.width * max_frames_per_row + spacing * (1 - max_frames_per_row) + offset * 2
     output_height = image.height * row_count + spacing * (1 - row_count) + offset * 2
@@ -73,24 +113,36 @@ def export_spritesheet(filename, offset, spacing, image):
 
     row = 0
     col = 0
-    for row in packed_layers:
-        for lt in row:
-            for layer in lt[1].children:
-                x 
-            for x in range(col, col + lt[1]):
+    for row_pack in packed_layers:
+        for lt in row_pack:
+            for layer in lt[0].children:
+                pdb.gimp_drawable_set_visible(layer, True)
                 temp_layer = pdb.gimp_layer_new_from_drawable(
-                    lt[0], export_img)
-                pdb.gimp_layer_add_alpha(temp_layer)
-                img.insert_layer(temp_layer)
+                    layer, export_img)
+                
+                if len(layer.children) == 0: # Cannot add alpha for layer group
+                    pdb.gimp_layer_add_alpha(temp_layer)
+
+                pdb.gimp_drawable_set_visible(temp_layer, True)
+                export_img.insert_layer(temp_layer)
                 temp_layer.translate(
-                    offset + x *(image.width + spacing),
+                    offset + (lt[1] - col - 1) * (image.width + spacing),
                     offset + row * (image.height + spacing))
-            col += lt[1]
+                col += 1
+        col = 0
         row += 1
-    
-    result = pdb.gimp_iamge_merge_visible_layers(img, 0)
-    pdb.gimp_file_save(img, result, filename, filename)
-    # TODO: export annotations
+
+    result = pdb.gimp_image_merge_visible_layers(export_img, 0)
+    pdb.gimp_file_save(export_img, result, filename, filename)
+
+    export_annotations(
+        filename,
+        offset,
+        spacing,
+        image.width,
+        image.height,
+        packed_layers)
+
     close_plugin_window(0)
 
 def pick_file(widget, offset_input, spacing_input, _image):
