@@ -1,6 +1,6 @@
 # GIMP Pixel Art Utils
 
-This repo provides a set of plugins for more convenient pixel art work in GIMP. It is mainly aimed to help artists working on games.
+This repo provides a set of plugins for more convenient pixel art work in GIMP. It is mainly aimed to help artists working on games. It has been inspired by brilliant plugin [tilemancer](https://github.com/malteehrlen/tilemancer), but evolved into something bigger.
 
 ## How to install
 
@@ -36,18 +36,6 @@ It also automatically exports JSON annotations so your application can always kn
 
 Plugin for previewing animations stored in a layer group. It allows you to have multiple animations within a single gimp project, each one stored in a distinct layer group (only top level layer groups are indexed for animations, so you can use layer groups on lower levels to perform blending operations). Use [spritesheetize](#spritesheetize) to export your animations to annotated spritesheet so you can use them in a game.
 
+Animations are played in reverse, to maintain consistent behaviour with GIF exports in Gimp. That means that first layer withing your layer group (=animation clip) is the last frame of the animation.
+
 ![Preview animations](docs/animation_preview.gif)
-
-## How to use
-
-This plugin is aimed at the users of tilemancer. This guide expects you have installed tilemancer into Gimp before. Expected workflow is such that you have any number of layer groups, some of those groups containing animations, others might only contain some tiles/one shot textures.
-
-You can preview any animation just by launching this plugin and selecting name of appropriate group from the dropdown menu. Animation is played automatically in an endless cycle, showing you live preview, so you can let it play in a corner of the screen and keep working on your animation, even adding new frames etc. You can also change FPS of the animation just by editing appropriate box and clicking `Update`.
-
-![Layers and preview](docs/screen.png)
-
-When you are done with your spritesheet, use Filters->Animations->Tilemancer plugin, choose "One row per group" shape and confirm. Finished spritesheet will be created into separate image.
-
-![Exported spritesheet](docs/screen2.png)
-
-> NOTE: Tilemancer exports everything in reverse, so first item in the group will be the first item on a row. For this reason, animation preview also plays first item as the last one. This is consistent with Gimp's behaviour when exporting GIFs.
