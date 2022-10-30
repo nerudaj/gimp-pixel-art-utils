@@ -75,6 +75,8 @@ def export_spritesheet(filename, offset, spacing, image):
     col = 0
     for row in packed_layers:
         for lt in row:
+            for layer in lt[1].children:
+                x 
             for x in range(col, col + lt[1]):
                 temp_layer = pdb.gimp_layer_new_from_drawable(
                     lt[0], export_img)
