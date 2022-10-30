@@ -124,7 +124,7 @@ def build_gui(_image):
     vertical_spacing = 0
 
     window = gtk.Window()
-    window.set_title("Plugin template")
+    window.set_title("Tilesetize")
     window.connect('destroy',  close_plugin_window)
     window_box = gtk.VBox()
     window.add(window_box)
