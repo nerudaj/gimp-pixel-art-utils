@@ -13,6 +13,7 @@ This repo provides a set of plugins for more convenient pixel art work in GIMP. 
  * [Tile preview](#tile-preview)
  * [Tilesetize](#tilesetize)
  * [Animation Preview](#animation-preview)
+ * [Spritesheetize](#spritesheetize)
 
 ## tile-preview
 
