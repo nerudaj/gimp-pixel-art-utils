@@ -32,6 +32,8 @@ It also automatically exports JSON annotations so your application can always kn
 
 ![Tilesitize annotations](docs/tilesetize.png)
 
+> NOTE: Keep in mind that this plugin toggles all of your layers visible, so it can perform the export.
+
 # animation-preview
 
 Plugin for previewing animations stored in a layer group. It allows you to have multiple animations within a single gimp project, each one stored in a distinct layer group (only top level layer groups are indexed for animations, so you can use layer groups on lower levels to perform blending operations). Use [spritesheetize](#spritesheetize) to export your animations to annotated spritesheet so you can use them in a game.
@@ -39,3 +41,13 @@ Plugin for previewing animations stored in a layer group. It allows you to have 
 Animations are played in reverse, to maintain consistent behaviour with GIF exports in Gimp. That means that first layer withing your layer group (=animation clip) is the last frame of the animation.
 
 ![Preview animations](docs/animation_preview.gif)
+
+# spritesheetize
+
+Plugin for exporting animations into a spritesheet image. It also exports JSON annotations for that spritesheet so you can load it programatically and not rely on concrete number of frames or positions of elements (as those can easily change). The exported JSON will always have the same name as exported image, plus `.json` extension (ie.: `test.png.json`).
+
+Your project needs to be organized in the same way [animation-preview](#animation-preview) plugin works. Each project can have any number of animation clips (called `states` in the JSON). Each clip has to be a top-level Layer group. Layer group can contain any number of layers/sub-groups (=frames). Frames are exported in reverse - first frame in the group is the last frame of the animation. This behaviour is consistent with built in GIF export in GIMP.
+
+The plugin uses very barebones fitting algorithm so the resulting spritesheet is smaller than one from tilemancer.
+
+> NOTE: Keep in mind that this plugin might toggle some of your layers visible, so it can perform the export.

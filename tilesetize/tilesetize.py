@@ -42,8 +42,8 @@ def export_tileset(filename, offset, spacing, _image, invert_order):
     if n_tiles_per_row % n_layers != 0:
         n_rows += 1 # There are some extra tiles
 
-    output_width = 2 * spacing + n_tiles_per_row * _image.width + (n_tiles_per_row - 1) * offset
-    output_height = 2 * spacing + n_rows * _image.height + (n_rows - 1) * offset
+    output_width = n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2
+    output_height = n_rows * _image.height + spacing * (n_rows - 1) + offset * 2
 
     img = pdb.gimp_image_new(
         output_width,
@@ -58,11 +58,15 @@ def export_tileset(filename, offset, spacing, _image, invert_order):
     for layer in layers:
         temp_layer = pdb.gimp_layer_new_from_drawable(
             layer, img)
-        pdb.gimp_layer_add_alpha(temp_layer)
+
+        if len(layer.children) == 0: # Cannot add alpha for layer group
+            pdb.gimp_layer_add_alpha(temp_layer)
+
+        pdb.gimp_drawable_set_visible(temp_layer, True)
         img.insert_layer(temp_layer)
         temp_layer.translate(
-            spacing + x * (_image.width + offset),
-            spacing + y * (_image.height + offset))
+            offset + x * (_image.width + spacing),
+            offset + y * (_image.height + spacing))
 
         x += 1
         if x == n_tiles_per_row:
@@ -124,7 +128,7 @@ def build_gui(_image):
     vertical_spacing = 0
 
     window = gtk.Window()
-    window.set_title("Plugin template")
+    window.set_title("Tilesetize")
     window.connect('destroy',  close_plugin_window)
     window_box = gtk.VBox()
     window.add(window_box)
