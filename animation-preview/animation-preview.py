@@ -43,6 +43,11 @@ def create_button(label, box, spacing):
     box.pack_start(btn, True, True, spacing)
     return btn
 
+def create_vbox(parent, grow_horizontally, spacing):
+    box = gtk.VBox()
+    parent.pack_start(box, grow_horizontally, True, spacing)
+    return box
+
 def create_hbox(parent, grow_vertically, spacing):
     box = gtk.HBox()
     parent.pack_start(box, grow_vertically, True, spacing)
@@ -149,9 +154,21 @@ def create_preview_window():
     # Target for image preview
     display_box = create_hbox(window_box, True, vertical_spacing)
 
+    # Bottom controls are organized in following box model:
+    # LL CC CC
+    # LL CC CC
+    # LL CC CC
+
+    # Main Vboxes
+    bottom_controls_hbox = create_hbox(window_box, False, horizontal_spacing)
+    labels_vbox = create_vbox(bottom_controls_hbox, True, horizontal_spacing)
+    controls_vbox = create_vbox(bottom_controls_hbox, True, horizontal_spacing)
+
     # Zoom controls
-    zoom_box = create_hbox(window_box, False, vertical_spacing)
-    create_label("Zoom", zoom_box, horizontal_spacing)
+    zoom_label_box = create_hbox(labels_vbox, True, vertical_spacing)
+    zoom_box = create_hbox(controls_vbox, False, vertical_spacing)
+    
+    create_label("Zoom", zoom_label_box, horizontal_spacing)
 
     zoom_out_btn = create_button("-", zoom_box, horizontal_spacing)
     zoom_out_btn.connect("clicked", zoom_out)
@@ -160,8 +177,9 @@ def create_preview_window():
     zoom_in_btn.connect("clicked", zoom_in)
 
     # FPS controls
-    fps_controls_box = create_hbox(window_box, False, vertical_spacing)
-    create_label("FPS", fps_controls_box, horizontal_spacing)
+    fps_label_box = create_hbox(labels_vbox, True, vertical_spacing)
+    fps_controls_box = create_hbox(controls_vbox, False, vertical_spacing)
+    create_label("FPS", fps_label_box, horizontal_spacing)
 
     DEFAULT_FPS = 16
     fps_entry = gtk.Entry()
@@ -174,8 +192,9 @@ def create_preview_window():
     fps_controls_box.pack_start(btn, True, True, horizontal_spacing)
 
     # Layer group selection
-    layer_select_box = create_hbox(window_box, False, vertical_spacing)
-    create_label("Group to play", layer_select_box, horizontal_spacing)
+    layer_label_box = create_hbox(labels_vbox, True, vertical_spacing)
+    layer_select_box = create_hbox(controls_vbox, False, vertical_spacing)
+    create_label("Group to play", layer_label_box, horizontal_spacing)
 
     combox = gtk.combo_box_new_text()
     combox.connect("changed", active_layer_changed, fps_entry)
