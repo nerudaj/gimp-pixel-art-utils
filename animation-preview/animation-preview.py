@@ -57,7 +57,7 @@ active_layer = None
 current_frame = None
 frame_index = 0
 playback = None
-zoom_level = 1.0
+zoom_level = -1.0
 
 def update_layers_info(image):
     global layers_list
@@ -193,8 +193,10 @@ def active_layer_changed(combo, fps_entry):
             playback = Playback(len(active_layer.children))
             update_fps(None, fps_entry)
 
+    # First time around, initialize zoom_level, then don't touch it
     global zoom_level
-    zoom_level = 128.0 / active_layer.width
+    if zoom_level == -1.0:
+        zoom_level = 128.0 / active_layer.width
 
     update_preview(force=True)
 
