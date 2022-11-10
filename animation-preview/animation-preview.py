@@ -55,6 +55,7 @@ preview_box = None
 layers_list = None
 active_layer = None
 current_frame = None
+current_frame_label = None
 frame_index = 0
 playback = None
 zoom_level = -1.0
@@ -123,8 +124,13 @@ def create_preview_window():
     window.add(window_box)
     window.set_keep_above(True)
 
-    display_box = create_hbox(window_box, True, vertical_spacing)
-
+    # Display current frame name
+    current_layer_show_box = create_hbox(window_box, False, vertical_spacing)
+    create_label("Current frame:", current_layer_show_box, horizontal_spacing)
+    
+    global current_frame_label
+    current_frame_label = create_label("", current_layer_show_box, horizontal_spacing)
+    
     # Playback & zoom controls
     playback_box = create_hbox(window_box, False, vertical_spacing)
     
@@ -139,6 +145,9 @@ def create_preview_window():
 
     next_btn = create_button("Next", playback_box, horizontal_spacing)
     next_btn.connect("clicked", next_frame)
+
+    # Target for image preview
+    display_box = create_hbox(window_box, True, vertical_spacing)
 
     # Zoom controls
     zoom_box = create_hbox(window_box, False, vertical_spacing)
@@ -237,6 +246,9 @@ def update_preview(force=False):
 
     active_layer_len = len(active_layer.children)
     current_frame = active_layer.children[active_layer_len - playback.frame_index - 1]
+
+    global current_frame_label
+    current_frame_label.set_text(current_frame.name)
 
     global display_box
     global preview_box
