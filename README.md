@@ -10,10 +10,17 @@ This repo provides a set of plugins for more convenient pixel art work in GIMP. 
 
 ## List of plugins
 
- * [Tile preview](#tile-preview)
- * [Tilesetize](#tilesetize)
  * [Animation Preview](#animation-preview)
- * [Spritesheetize](#spritesheetize)
+ * [Tile preview](#tile-preview)
+ * [Spritesheetize / Tilesetize](#exporter)
+
+# animation-preview
+
+Plugin for previewing animations stored in a layer group. It allows you to have multiple animations within a single gimp project, each one stored in a distinct layer group (only top level layer groups are indexed for animations, so you can use layer groups on lower levels to perform blending operations). Use [spritesheetize](#spritesheetize) to export your animations to annotated spritesheet so you can use them in a game.
+
+Animations are played in reverse, to maintain consistent behaviour with GIF exports in Gimp. That means that first layer withing your layer group (=animation clip) is the last frame of the animation.
+
+![Preview animations](docs/animation_preview.gif)
 
 ## tile-preview
 
@@ -25,34 +32,20 @@ The nature of live preview itself is a little hacky, so it updates once per seco
 
 ![Tile preview 2](docs/tile_preview2.png)
 
-## tilesetize
+## tilesetize <span id="exporter"></span>
 
-Plugin for exporting image containing tiles into tileset. It allows you to set offset from borders of the image, spacing between tiles and order of export.
+Plugin for exporting tilesets and spritesheets. It allows you to set offset from borders and spacing between tiles (or frames).
 
-It also automatically exports JSON annotations so your application can always know how the tiles are laid out even if you change your settings. The exported JSON will always have the same name as exported image, plus `.json` extension (ie.: `test.png.json`). Most of the JSON should be self explanatory, and following image should help you understand the rest.
+Plugin works in two modes - if your project is a set of animation clips (top level layer groups containing sets of frames), then leave the mode set to Spritesheetize (rule of thumb - are you using Animation Preview? If yes, stick to this mode). It will try to pack the clips in somewhat efficient way (more efficient than tilemancers "One row per layer group" mode).
+
+If your project is just a set of images (tiles), then set the mode to Tilesetize. In this mode, you can even select the order in which tiles will be placed to output image. This export results in as square output image as possible.
+
+Both modes also automatically export JSON annotations so your application can always know how the tiles (clips) are laid out even if you change your settings or add new images. The exported JSON will always have the same name as exported image, plus `.json` extension (ie.: `test.png.json`). Most of the JSON should be self explanatory, and following image should help you understand the rest:
 
 ![Tilesitize annotations](docs/tilesetize.png)
 
-> NOTE: Keep in mind that this plugin toggles all of your layers visible, so it can perform the export.
-
-# animation-preview
-
-Plugin for previewing animations stored in a layer group. It allows you to have multiple animations within a single gimp project, each one stored in a distinct layer group (only top level layer groups are indexed for animations, so you can use layer groups on lower levels to perform blending operations). Use [spritesheetize](#spritesheetize) to export your animations to annotated spritesheet so you can use them in a game.
-
-Animations are played in reverse, to maintain consistent behaviour with GIF exports in Gimp. That means that first layer withing your layer group (=animation clip) is the last frame of the animation.
-
-![Preview animations](docs/animation_preview.gif)
-
-# spritesheetize
-
-Plugin for exporting animations into a spritesheet image. It also exports JSON annotations for that spritesheet so you can load it programatically and not rely on concrete number of frames or positions of elements (as those can easily change). The exported JSON will always have the same name as exported image, plus `.json` extension (ie.: `test.png.json`).
-
-Your project needs to be organized in the same way [animation-preview](#animation-preview) plugin works. Each project can have any number of animation clips (called `states` in the JSON). Each clip has to be a top-level Layer group. Layer group can contain any number of layers/sub-groups (=frames). Frames are exported in reverse - first frame in the group is the last frame of the animation. This behaviour is consistent with built in GIF export in GIMP.
-
-The plugin uses simple fitting algorithm so the resulting spritesheet is smaller than one from tilemancer.
-
-Here's how the resulting spritesheet looks like in case of `testdata/animations-test.xcf` project:
+Example how multiple animation clips might be packed:
 
 ![Spritesheetize result](docs/animations_test.png)
 
-> NOTE: Keep in mind that this plugin might toggle some of your layers visible, so it can perform the export.
+> NOTE: Keep in mind that this plugin toggles all of your layers visible, so it can perform the export.
