@@ -1,2 +1,7 @@
-v1.0.0 changelog:
+v0.0.2 changelog:
+ * Unified Spritesheetize and Tilesetize into singlar plugin (pixel-art-exporter folder)
+ * Added display for current animation frame in Animation preview
+ * Fixed zoom level reseting when changing animation clips in Animation preview
+
+v0.0.1 changelog
  * Initial version
