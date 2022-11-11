@@ -48,7 +48,7 @@ def create_combo(values, box, spacing = 0):
 
 # GENERIC HELPERS
 def write_obj_to_file_as_json(obj, filename):
-    pdb.gimp_message("write_obj_to_file_as_json({}, {})".format(obj, filename))
+    #pdb.gimp_message("write_obj_to_file_as_json({}, {})".format(obj, filename))
     fp = open(filename, "wt")
     json.dump(obj, fp, indent=4)
     fp.close()
@@ -226,22 +226,32 @@ def export_spritesheet(filename, image, offset, spacing):
 
     row = 0
     col = 0
-    for row_pack in packed_layers:
-        for lt in row_pack:
-            for layer in lt[0].children:
-                pdb.gimp_drawable_set_visible(layer, True)
+    for packed_row in packed_layers:
+        for clip in packed_row:
+            left = offset + (image.width + spacing) * col
+            top = offset + (image.height + spacing) * row
+
+            clip_len = clip[1]
+            col += clip_len
+
+            frames = clip[0].children
+            frame_index = 0
+
+            for frame in frames:
+                pdb.gimp_drawable_set_visible(frame, True)
                 temp_layer = pdb.gimp_layer_new_from_drawable(
-                    layer, export_img)
+                    frame, export_img)
                 
-                if len(layer.children) == 0: # Cannot add alpha for layer group
+                if len(frame.children) == 0: # Cannot add alpha for layer group
                     pdb.gimp_layer_add_alpha(temp_layer)
 
                 pdb.gimp_drawable_set_visible(temp_layer, True)
                 export_img.insert_layer(temp_layer)
                 temp_layer.translate(
-                    offset + (lt[1] - col - 1) * (image.width + spacing),
-                    offset + row * (image.height + spacing))
-                col += 1
+                    left + (clip_len - frame_index - 1) * (image.width + spacing),
+                    top)
+                frame_index += 1
+
         col = 0
         row += 1
 
@@ -351,7 +361,7 @@ def build_gui(_image):
     window.show_all()
 
 def close_plugin_window(ret):
-    pdb.gimp_message("Plugin exit point")
+    #pdb.gimp_message("Plugin exit point")
     gtk.main_quit()
 
 def spritetilesetize_plugin_entry(_image, _drawable):
