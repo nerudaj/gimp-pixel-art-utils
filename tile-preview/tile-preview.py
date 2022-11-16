@@ -54,7 +54,7 @@ class RenderMode:
 
     @staticmethod
     def get_string_annotations():
-        return [RenderMode.DEFAULT, RenderMode.TWO_ROWS]
+        return [RenderMode.DEFAULT, RenderMode.TWO_ROWS, RenderMode.TWO_COLS]
 
 class PreviewContext:
     def __init__(self):
@@ -88,7 +88,10 @@ def update_preview_internal(image_type, width, height, zoom, mode, layer1, layer
             return Dim(
                 int(width * 3.0),
                 int(height * (2.0 if layer2 else 1.0)))
-
+        elif mode == RenderMode.TWO_COLS:
+            return Dim(
+                int(width * (2.0 if layer2 else 1.0)),
+                int(height * 3.0))
 
     def copy_layer_to(source, destination, x, y):
         def make_layer_visible_with_alpha(layer):
@@ -141,6 +144,13 @@ def update_preview_internal(image_type, width, height, zoom, mode, layer1, layer
         if layer2 is not None:
             for x in range(0, 3):
                 copy_layer_to(layer2, preview_context.temp_img, x * width, height)
+    elif mode == RenderMode.TWO_COLS:
+        for y in range(0, 3):
+            copy_layer_to(layer1, preview_context.temp_img, 0, y * height)
+
+        if layer2 is not None:
+            for y in range(0, 3):
+                copy_layer_to(layer2, preview_context.temp_img, width, y * height)
 
     # Disable interpolation and zoom the image by scaling
     pdb.gimp_context_set_interpolation(0)
