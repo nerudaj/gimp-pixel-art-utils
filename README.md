@@ -24,13 +24,16 @@ Animations are played in reverse, to maintain consistent behaviour with GIF expo
 
 ## tile-preview
 
-Plugin for showing how will current layer look like when tiled. It allows zooming and has live preview - you can edit your layer or even switch to a different layer and it will update.
+Plugin for showing how will current layer look like when tiled under various conditions and can even show you how the tile looks in combination with other tiles. Due to performance issues, there is no live preview, you have to use manual refresh button. Preview can also be zoomed.
 
-The nature of live preview itself is a little hacky, so it updates once per second and can prompt a progress bar in status tray of Gimp or even show a loading icon on your mouse. I don't have any better solution for it at the moment.
+Tile preview works in couple different modes:
 
-![Tile preview 1](docs/tile_preview1.png)
+* Block - shows tile in 3x3 tile configuration. If secondary layer is selected, it will make the borders, leaving the primary as the center tile.
+* Floor - shows tile as 3x1 floor configuration. If secondary layer is selected, it will be used for edge tiles.
+* Columns - shows tile as 1x3 column configuration. If secondary layer is selected, it will be shown as additional columns on the left and on the right.
+* V. Adjacent - means vertically adjacent. Shows 1x2 column configuration where primary layer is the top tile and secondary layer is the bottom tile.
 
-![Tile preview 2](docs/tile_preview2.png)
+![Tile preview](docs/tile_preview.gif)
 
 ## tilesetize <span id="exporter"></span>
 
