@@ -1,3 +1,10 @@
+v0.0.3 changelog:
+ * Updated Tile Preview plugin
+	* Features distinct render modes
+	* Manual refresh due to performance issues
+	* Background color is based off brush background color
+	* Preview is zoomable
+
 v0.0.2 changelog:
  * Unified Spritesheetize and Tilesetize into singlar plugin (pixel-art-exporter folder)
  * Added display for current animation frame in Animation preview
