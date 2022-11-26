@@ -1,3 +1,8 @@
+v0.0.x changelog:
+ * Spritesheetize / Tilesetize now supports upscaling of the output image
+	* Upscaling upscales whole result, including spacing and offsets
+	* JSONs are adjusted
+
 v0.0.3 changelog:
  * Updated Tile Preview plugin
 	* Features distinct render modes

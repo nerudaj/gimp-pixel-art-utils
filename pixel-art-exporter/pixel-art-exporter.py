@@ -54,28 +54,28 @@ def write_obj_to_file_as_json(obj, filename):
     fp.close()
 
 # Tilesetize
-def export_tileset_annotations(filename, offset, spacing, tile_width, tile_height, count, items_per_row, nrows):
+def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_width, tile_height, count, items_per_row, nrows):
     pdb.gimp_message("Exporting annotations")
     
     annotation = {
-        "offset": offset,
-        "spacing": spacing,
+        "offset": int(offset * upscale_factor),
+        "spacing": int(spacing * upscale_factor),
         "tile_size": {
-            "width": tile_width, 
-            "height": tile_height
+            "width": int(tile_width * upscale_factor),
+            "height": int(tile_height * upscale_factor)
         },
         "ntiles": count,
         "tiles_per_row": items_per_row,
         "bounds": {
-            "left": offset,
-            "top": offset,
-            "width": items_per_row * tile_width + (items_per_row - 1) * spacing,
-            "height": nrows * tile_height + (nrows - 1) * spacing
+            "left": int(offset * upscale_factor),
+            "top": int(offset * upscale_factor),
+            "width": int((items_per_row * tile_width + (items_per_row - 1) * spacing) * upscale_factor),
+            "height": int((nrows * tile_height + (nrows - 1) * spacing) * upscale_factor)
         }
     }
     write_obj_to_file_as_json(annotation, filename + ".json")
 
-def export_tileset(filename, _image, offset, spacing, invert_order):
+def export_tileset(filename, _image, offset, spacing, upscale_factor, invert_order):
     pdb.gimp_message("Exporting tileset to {}".format(filename))
 
     n_layers = len(_image.layers)
@@ -84,8 +84,8 @@ def export_tileset(filename, _image, offset, spacing, invert_order):
     if n_tiles_per_row % n_layers != 0:
         n_rows += 1 # There are some extra tiles
 
-    output_width = n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2
-    output_height = n_rows * _image.height + spacing * (n_rows - 1) + offset * 2
+    output_width = (n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2) * upscale_factor
+    output_height = (n_rows * _image.height + spacing * (n_rows - 1) + offset * 2) * upscale_factor
 
     img = pdb.gimp_image_new(
         output_width,
@@ -93,6 +93,8 @@ def export_tileset(filename, _image, offset, spacing, invert_order):
         _image.base_type);
         
     pdb.gimp_message("num of layers {}".format(len(img.layers)))
+    
+    pdb.gimp_context_set_interpolation(0)
     
     layers = _image.layers[::-1] if invert_order else _image.layers
     x = 0
@@ -106,21 +108,28 @@ def export_tileset(filename, _image, offset, spacing, invert_order):
 
         pdb.gimp_drawable_set_visible(temp_layer, True)
         img.insert_layer(temp_layer)
+        pdb.gimp_layer_scale(
+            temp_layer,
+            _image.width * upscale_factor,
+            _image.height * upscale_factor,
+            False)
         temp_layer.translate(
-            offset + x * (_image.width + spacing),
-            offset + y * (_image.height + spacing))
+            int((offset + x * (_image.width + spacing)) * upscale_factor),
+            int((offset + y * (_image.height + spacing)) * upscale_factor))
 
         x += 1
         if x == n_tiles_per_row:
             x = 0
             y += 1
 
-    result = pdb.gimp_image_merge_visible_layers(img, 0)
-    pdb.gimp_file_save(img, result, filename, filename)
+    final_layer = img.flatten()
+    
+    pdb.gimp_file_save(img, final_layer, filename, filename)
     export_tileset_annotations(
         filename,
         offset,
         spacing,
+        upscale_factor,
         _image.width,
         _image.height,
         n_layers,
@@ -167,18 +176,18 @@ def compute_packed_layers(image):
 
     return pack_layers(layer_refs, frame_sum)
 
-def export_spritesheet_annotations(filename, offset, spacing, frame_width, frame_height, packed_layers):
+def export_spritesheet_annotations(filename, offset, spacing, upscale_factor, frame_width, frame_height, packed_layers):
     pdb.gimp_message("export_annotations({}, {}, {})".format(filename, offset, spacing))
 
     annotation = {
         "defaults": {
             "frame": {
-                "width": frame_width,
-                "height": frame_height
+                "width": int(frame_width * upscale_factor),
+                "height": int(frame_height * upscale_factor)
             },
             "spacing": {
-                "horizontal": spacing,
-                "vertical": spacing
+                "horizontal": int(spacing * upscale_factor),
+                "vertical": int(spacing * upscale_factor)
             }
         },
         "states": []
@@ -192,10 +201,10 @@ def export_spritesheet_annotations(filename, offset, spacing, frame_width, frame
             annotation["states"].append({
                 "name": state[0].name,
                 "bounds": {
-                    "left": offset + (frame_width + spacing) * col,
-                    "top": offset + (frame_height + spacing) * row,
-                    "width": frame_width * state[1] + spacing * (state[1] - 1),
-                    "height": frame_height
+                    "left": int((offset + (frame_width + spacing) * col) * upscale_factor),
+                    "top": int((offset + (frame_height + spacing) * row) * upscale_factor),
+                    "width": int((frame_width * state[1] + spacing * (state[1] - 1)) * upscale_factor),
+                    "height": int(frame_height * upscale_factor)
                 },
                 "nframes": state[1]
             })
@@ -205,7 +214,7 @@ def export_spritesheet_annotations(filename, offset, spacing, frame_width, frame
 
     write_obj_to_file_as_json(annotation, filename + ".json")
 
-def export_spritesheet(filename, image, offset, spacing):
+def export_spritesheet(filename, image, offset, spacing, upscale_factor):
     pdb.gimp_message("export_spritesheet({}, {}, {})".format(filename, offset, spacing))
     packed_layers = compute_packed_layers(image)
     
@@ -220,16 +229,18 @@ def export_spritesheet(filename, image, offset, spacing):
         .format(output_width, output_height))
     
     export_img = pdb.gimp_image_new(
-        output_width,
-        output_height,
+        int(output_width * upscale_factor),
+        int(output_height * upscale_factor),
         image.base_type)
+
+    pdb.gimp_context_set_interpolation(0)
 
     row = 0
     col = 0
     for packed_row in packed_layers:
         for clip in packed_row:
-            left = offset + (image.width + spacing) * col
-            top = offset + (image.height + spacing) * row
+            left = int((offset + (image.width + spacing) * col) * upscale_factor)
+            top = int((offset + (image.height + spacing) * row) * upscale_factor)
 
             clip_len = clip[1]
             col += clip_len
@@ -247,8 +258,13 @@ def export_spritesheet(filename, image, offset, spacing):
 
                 pdb.gimp_drawable_set_visible(temp_layer, True)
                 export_img.insert_layer(temp_layer)
+                pdb.gimp_layer_scale(
+                    temp_layer,
+                    int(image.width * upscale_factor),
+                    int(image.height * upscale_factor),
+                    False)
                 temp_layer.translate(
-                    left + (clip_len - frame_index - 1) * (image.width + spacing),
+                    left + int(((clip_len - frame_index - 1) * (image.width + spacing)) * upscale_factor),
                     top)
                 frame_index += 1
 
@@ -262,6 +278,7 @@ def export_spritesheet(filename, image, offset, spacing):
         filename,
         offset,
         spacing,
+        upscale_factor,
         image.width,
         image.height,
         packed_layers)
@@ -279,13 +296,14 @@ def pick_file():
     save_dlg.destroy()
     return save_filename
 
-def export_clicked(widget, offset_input, spacing_input, mode_combo, order_combo, image):
+def export_clicked(widget, offset_input, spacing_input, upscale_input, mode_combo, order_combo, image):
     output_filename = pick_file()
     if output_filename is None:
         return
 
     offset = int(offset_input.get_text())
     spacing = int(spacing_input.get_text())
+    upscale_factor = float(upscale_input.get_text())
 
     spritesheetize = mode_combo.get_active_text() == "Spritesheetize"
     if spritesheetize:
@@ -293,7 +311,8 @@ def export_clicked(widget, offset_input, spacing_input, mode_combo, order_combo,
             output_filename,
             image,
             offset,
-            spacing)
+            spacing,
+            upscale_factor)
     else:
         invert_order = order_combo.get_active_text() == "Bottom to up"
         export_tileset(
@@ -301,6 +320,7 @@ def export_clicked(widget, offset_input, spacing_input, mode_combo, order_combo,
             image,
             offset,
             spacing,
+            upscale_factor,
             invert_order)
 
     close_plugin_window(0)
@@ -328,6 +348,7 @@ def build_gui(_image):
     create_label("Spacing", labels_box)
     create_label("Mode", labels_box)
     create_label("Layer order (tilesize only)", labels_box)
+    create_label("Upscale factor", labels_box)
 
     # Controls
     offset_input = create_value_input(
@@ -342,6 +363,9 @@ def build_gui(_image):
     order_combo = create_combo(
         ["Top to bottom", "Bottom to up"],
         controls_box)
+    upscale_input = create_value_input(
+        1,
+        controls_box)
 
     # Help
     create_label("If your project is a set of individual images, set the mode to Tilesetize.", help_box, 5)
@@ -354,6 +378,7 @@ def build_gui(_image):
         export_clicked,
         offset_input,
         spacing_input,
+        upscale_input,
         mode_combo,
         order_combo,
         _image)
