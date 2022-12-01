@@ -1,4 +1,7 @@
 v0.0.x changelog:
+ * Animation Preview now has button for exporting current clip to WEBP
+	* Speed is based of set FPS
+	* Size of output image is dependent on zoom level in plugin
  * Spritesheetize / Tilesetize now supports upscaling of the output image
 	* Upscaling upscales whole result, including spacing and offsets
 	* JSONs are adjusted

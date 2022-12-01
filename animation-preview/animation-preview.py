@@ -5,6 +5,11 @@ import gtk
 import gimpui
 import gobject
 
+def log(message):
+    enable_logging = False
+    if enable_logging:
+        pdb.gimp_message(message)
+
 class Playback:
     def __init__(self, frame_count):
         self.fps = 1
@@ -37,11 +42,17 @@ def create_label(text, parent, spacing):
     parent.pack_start(label, True, True, spacing)
     return label
 
-def create_button(label, box, spacing):
+def create_button(label, box, spacing = 0):
     btn = gtk.Button()
     btn.set_label(label)
     box.pack_start(btn, True, True, spacing)
     return btn
+
+def create_value_input(value, box, spacing = 0):
+    input_entry = gtk.Entry()
+    input_entry.set_text("{}".format(value))
+    box.pack_start(input_entry, True, True, spacing)
+    return input_entry
 
 def create_vbox(parent, grow_horizontally, spacing):
     box = gtk.VBox()
@@ -72,7 +83,7 @@ def update_layers_info(image):
     for layer in image_ref.layers:
         # Is layer group (= has children)
         if len(layer.children) > 0:
-            # pdb.gimp_message("Adding layer '{}'".format(layer.name))
+            # log("Adding layer '{}'".format(layer.name))
             layers_list.append(layer)
 
 def update_fps(widget, entry):
@@ -111,8 +122,8 @@ def zoom_out(widget):
     zoom_level /= 2.0
     update_preview(force=True)
 
-def create_preview_window():
-    pdb.gimp_message("create_preview_window start")
+def create_preview_window(image):
+    log("create_preview_window start")
 
     global window
     global current_frame
@@ -182,14 +193,10 @@ def create_preview_window():
     create_label("FPS", fps_label_box, horizontal_spacing)
 
     DEFAULT_FPS = 16
-    fps_entry = gtk.Entry()
-    fps_entry.set_text("{}".format(DEFAULT_FPS))
-    fps_controls_box.pack_start(fps_entry, True, True, horizontal_spacing)
+    fps_entry = create_value_input(DEFAULT_FPS, fps_controls_box)
 
-    btn = gtk.Button()
-    btn.set_label("Update")
+    btn = create_button("Update", fps_controls_box)
     btn.connect("clicked", update_fps, fps_entry)
-    fps_controls_box.pack_start(btn, True, True, horizontal_spacing)
 
     # Layer group selection
     layer_label_box = create_hbox(labels_vbox, True, vertical_spacing)
@@ -202,12 +209,78 @@ def create_preview_window():
         combox.append_text(layer.name)
     combox.set_active(0)
     layer_select_box.pack_start(combox, True, True, horizontal_spacing)
+    
+    export_btn_hbox = create_hbox(window_box, False, 0)
+    export_btn = create_button("Export to WEBP", export_btn_hbox)
+    export_btn.connect("clicked", export_clip_to_webp, image)
 
     window.show_all()
     update_preview()
 
+def export_clip_to_webp(widget, image):
+    def pick_file():
+        save_dlg = gtk.FileChooserDialog(
+            "Filename", 
+            None, 
+            gtk.FILE_CHOOSER_ACTION_SAVE,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+            
+        response = save_dlg.run()    
+        save_filename = save_dlg.get_filename() # null if cancelled
+        save_dlg.destroy()
+        return save_filename
+
+    out_filename = pick_file()
+    if (out_filename is None):
+        return
+
+    out_filename += ".webp"
+    
+    global active_layer
+    global playback
+    global zoom_level
+    
+    out_img = pdb.gimp_image_new(
+        int(image.width * zoom_level),
+        int(image.height * zoom_level),
+        image.base_type)
+    
+    for frame in active_layer.children:
+        temp_layer = pdb.gimp_layer_new_from_drawable(
+            frame, out_img)
+        
+        if len(frame.children) == 0:
+            pdb.gimp_layer_add_alpha(temp_layer)
+        pdb.gimp_drawable_set_visible(temp_layer, True)
+        
+        out_img.insert_layer(temp_layer)
+        pdb.gimp_layer_scale(
+            temp_layer,
+            int(image.width * zoom_level),
+            int(image.height * zoom_level),
+            False)
+
+    pdb.file_webp_save(
+        out_img,
+        out_img.layers[0],
+        out_filename,
+        out_filename,
+        0, # default preset
+        1, # lossless
+        90, # image quality
+        50, # alpha quality
+        True, # animate
+        True, # loop
+        False, # minimize_size
+        0, # kf_distance
+        False, # exif
+        False, # iptc
+        False, # xmp
+        int(1000.0 / playback.fps), # delay
+        False) # force_delay
+
 def active_layer_changed(combo, fps_entry):
-    pdb.gimp_message("active_layer_changed({})"
+    log("active_layer_changed({})"
         .format(combo.get_active_text()))
 
     global layers_list
@@ -216,7 +289,7 @@ def active_layer_changed(combo, fps_entry):
 
     for layer in layers_list:
         if layer.name == combo.get_active_text():
-            pdb.gimp_message("Found matching layer, setting active_layer")
+            log("Found matching layer, setting active_layer")
             active_layer = layer
             playback = Playback(len(active_layer.children))
             update_fps(None, fps_entry)
@@ -248,7 +321,7 @@ def get_scaled_layer(layer, image_ref, scale):
     return temp_layer
 
 def update_preview(force=False):
-    # pdb.gimp_message("update_preview")
+    # log("update_preview")
     
     global playback
     global current_frame
@@ -288,19 +361,19 @@ def update_preview(force=False):
         gobject.timeout_add(1000 / playback.fps, update_preview)
 
 def close_preview_window(ret):
-    pdb.gimp_message("quitting Animation preview plugin")
+    log("quitting Animation preview plugin")
     gtk.main_quit()
 
 def run_plugin_function(_image, _drawable):
-    pdb.gimp_message("Running Animation Preview plugin")
+    log("Running Animation Preview plugin")
 
     global image_ref
     image_ref = _image
 
-    pdb.gimp_message("Image has {} layers".format(len(image_ref.layers)))
+    log("Image has {} layers".format(len(image_ref.layers)))
     update_layers_info(image_ref)
 
-    create_preview_window()
+    create_preview_window(image_ref)
     gtk.main()
 
 ######################
