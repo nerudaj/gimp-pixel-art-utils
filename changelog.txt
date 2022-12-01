@@ -1,4 +1,4 @@
-v0.0.x changelog:
+v0.0.4 changelog:
  * Animation Preview now has button for exporting current clip to WEBP
 	* Speed is based of set FPS
 	* Size of output image is dependent on zoom level in plugin
