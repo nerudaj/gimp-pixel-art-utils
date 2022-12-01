@@ -245,7 +245,7 @@ def export_clip_to_webp(widget, image):
         int(image.height * zoom_level),
         image.base_type)
     
-    for frame in active_layer.children:
+    for frame in active_layer.children[::-1]:
         temp_layer = pdb.gimp_layer_new_from_drawable(
             frame, out_img)
         
