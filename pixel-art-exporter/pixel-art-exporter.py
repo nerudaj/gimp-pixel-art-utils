@@ -8,6 +8,11 @@ import atk
 import math
 import json
 
+def log(message):
+    enable_logging = False
+    if enable_logging:
+        pdb.gimp_message(message)
+
 # GUI HELPERS
 def create_vbox(parent, grow_horizontally, spacing = 0):
     box = gtk.VBox()
@@ -48,14 +53,14 @@ def create_combo(values, box, spacing = 0):
 
 # GENERIC HELPERS
 def write_obj_to_file_as_json(obj, filename):
-    #pdb.gimp_message("write_obj_to_file_as_json({}, {})".format(obj, filename))
+    #log("write_obj_to_file_as_json({}, {})".format(obj, filename))
     fp = open(filename, "wt")
     json.dump(obj, fp, indent=4)
     fp.close()
 
 # Tilesetize
 def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_width, tile_height, count, items_per_row, nrows):
-    pdb.gimp_message("Exporting annotations")
+    log("Exporting annotations")
     
     annotation = {
         "offset": int(offset * upscale_factor),
@@ -76,7 +81,7 @@ def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_w
     write_obj_to_file_as_json(annotation, filename + ".json")
 
 def export_tileset(filename, _image, offset, spacing, upscale_factor, invert_order):
-    pdb.gimp_message("Exporting tileset to {}".format(filename))
+    log("export_tileset({}, {}, {}, {})".format(filename, offset, spacing, upscale_factor))
 
     n_layers = len(_image.layers)
     n_tiles_per_row = int(math.sqrt(n_layers))
@@ -84,15 +89,13 @@ def export_tileset(filename, _image, offset, spacing, upscale_factor, invert_ord
     if n_tiles_per_row % n_layers != 0:
         n_rows += 1 # There are some extra tiles
 
-    output_width = (n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2) * upscale_factor
-    output_height = (n_rows * _image.height + spacing * (n_rows - 1) + offset * 2) * upscale_factor
+    output_width = n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2
+    output_height = n_rows * _image.height + spacing * (n_rows - 1) + offset * 2
 
     img = pdb.gimp_image_new(
-        output_width,
-        output_height,
+        int(output_width * upscale_factor),
+        int(output_height * upscale_factor),
         _image.base_type);
-        
-    pdb.gimp_message("num of layers {}".format(len(img.layers)))
     
     pdb.gimp_context_set_interpolation(0)
     
@@ -122,9 +125,9 @@ def export_tileset(filename, _image, offset, spacing, upscale_factor, invert_ord
             x = 0
             y += 1
 
-    final_layer = img.flatten()
-    
+    final_layer = pdb.gimp_image_merge_visible_layers(img, 0)
     pdb.gimp_file_save(img, final_layer, filename, filename)
+
     export_tileset_annotations(
         filename,
         offset,
@@ -141,7 +144,7 @@ def tuple_second_elem(lt):
     return lt[1];
 
 def pack_layers(layers, frame_sum):
-    pdb.gimp_message("pack_layers({}, {})"
+    log("pack_layers({}, {})"
         .format(layers, frame_sum))
     layers = sorted(layers, key=tuple_second_elem, reverse=True)
 
@@ -162,7 +165,7 @@ def pack_layers(layers, frame_sum):
     return rows
 
 def compute_packed_layers(image):
-    pdb.gimp_message("compute_packed_layers({})"
+    log("compute_packed_layers({})"
         .format(image))
     frame_sum = 0 # total number of frames that will be in spritesheet
     layer_refs = []
@@ -177,7 +180,7 @@ def compute_packed_layers(image):
     return pack_layers(layer_refs, frame_sum)
 
 def export_spritesheet_annotations(filename, offset, spacing, upscale_factor, frame_width, frame_height, packed_layers):
-    pdb.gimp_message("export_annotations({}, {}, {})".format(filename, offset, spacing))
+    log("export_annotations({}, {}, {})".format(filename, offset, spacing))
 
     annotation = {
         "defaults": {
@@ -197,7 +200,7 @@ def export_spritesheet_annotations(filename, offset, spacing, upscale_factor, fr
     col = 0
     for packed_row in packed_layers:
         for state in packed_row:
-            pdb.gimp_message(state)
+            log(state)
             annotation["states"].append({
                 "name": state[0].name,
                 "bounds": {
@@ -215,7 +218,7 @@ def export_spritesheet_annotations(filename, offset, spacing, upscale_factor, fr
     write_obj_to_file_as_json(annotation, filename + ".json")
 
 def export_spritesheet(filename, image, offset, spacing, upscale_factor):
-    pdb.gimp_message("export_spritesheet({}, {}, {})".format(filename, offset, spacing))
+    log("export_spritesheet({}, {}, {})".format(filename, offset, spacing))
     packed_layers = compute_packed_layers(image)
     
     max_frames_per_row = 0
@@ -225,7 +228,7 @@ def export_spritesheet(filename, image, offset, spacing, upscale_factor):
 
     output_width = image.width * max_frames_per_row + spacing * (1 - max_frames_per_row) + offset * 2
     output_height = image.height * row_count + spacing * (1 - row_count) + offset * 2
-    pdb.gimp_message("Image output dimensions: {}x{}"
+    log("Image output dimensions: {}x{}"
         .format(output_width, output_height))
     
     export_img = pdb.gimp_image_new(
@@ -249,7 +252,6 @@ def export_spritesheet(filename, image, offset, spacing, upscale_factor):
             frame_index = 0
 
             for frame in frames:
-                pdb.gimp_drawable_set_visible(frame, True)
                 temp_layer = pdb.gimp_layer_new_from_drawable(
                     frame, export_img)
                 
@@ -257,6 +259,7 @@ def export_spritesheet(filename, image, offset, spacing, upscale_factor):
                     pdb.gimp_layer_add_alpha(temp_layer)
 
                 pdb.gimp_drawable_set_visible(temp_layer, True)
+
                 export_img.insert_layer(temp_layer)
                 pdb.gimp_layer_scale(
                     temp_layer,
@@ -326,7 +329,7 @@ def export_clicked(widget, offset_input, spacing_input, upscale_input, mode_comb
     close_plugin_window(0)
 
 def build_gui(_image):
-    pdb.gimp_message("build_gui")
+    log("build_gui")
 
     horizontal_spacing = 10
     vertical_spacing = 0
@@ -386,11 +389,11 @@ def build_gui(_image):
     window.show_all()
 
 def close_plugin_window(ret):
-    #pdb.gimp_message("Plugin exit point")
+    #log("Plugin exit point")
     gtk.main_quit()
 
 def spritetilesetize_plugin_entry(_image, _drawable):
-    pdb.gimp_message("Plugin entry point")
+    log("Plugin entry point")
 
     build_gui(_image)
     
