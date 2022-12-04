@@ -330,6 +330,17 @@ def export_clicked(widget, offset_input, spacing_input, upscale_input, mode_comb
 
 def build_gui(_image):
     log("build_gui")
+    
+    def predict_mode(image):
+        """
+        returns 0 for spritesheetize and 1 for tilesetize
+        """
+        layers_w_children_count = 0
+        for layer in image.layers:
+            if len(layer.children) > 0:
+                layers_w_children_count += 1
+        
+        return 1 if layers_w_children_count < (len(image.layers) / 2) else 0
 
     horizontal_spacing = 10
     vertical_spacing = 0
@@ -363,6 +374,7 @@ def build_gui(_image):
     mode_combo = create_combo(
         ["Spritesheetize", "Tilesetize"],
         controls_box)
+    mode_combo.set_active(predict_mode(_image))
     order_combo = create_combo(
         ["Top to bottom", "Bottom to up"],
         controls_box)
