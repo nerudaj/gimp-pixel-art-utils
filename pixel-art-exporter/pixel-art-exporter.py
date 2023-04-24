@@ -64,12 +64,15 @@ def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_w
     
     annotation = {
         "offset": int(offset * upscale_factor),
-        "spacing": int(spacing * upscale_factor),
-        "tile_size": {
+        "spacing": {
+            "horizontal": int(spacing * upscale_factor),
+            "vertical": int(spacing * upscale_factor)
+        },
+        "frame": {
             "width": int(tile_width * upscale_factor),
             "height": int(tile_height * upscale_factor)
         },
-        "ntiles": count,
+        "nframes": count,
         "tiles_per_row": items_per_row,
         "bounds": {
             "left": int(offset * upscale_factor),
