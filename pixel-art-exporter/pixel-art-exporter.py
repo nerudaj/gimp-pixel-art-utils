@@ -58,6 +58,13 @@ def write_obj_to_file_as_json(obj, filename):
     json.dump(obj, fp, indent=4)
     fp.close()
 
+def add_offsets_to_image(img):
+    # Just having image to include offsets is not enough, there has to be
+    # invisible layer as big as the image in order to get offsets in the
+    # exported result
+    offset_layer = pdb.gimp_layer_new(img, img.width, img.height, 0, "", 0, 0)
+    img.insert_layer(offset_layer);
+
 # Tilesetize
 def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_width, tile_height, count, items_per_row, nrows):
     log("Exporting annotations")
@@ -105,6 +112,7 @@ def export_tileset(filename, _image, offset, spacing, upscale_factor, invert_ord
         _image.base_type);
     
     pdb.gimp_context_set_interpolation(0)
+    add_offsets_to_image(img)
     
     layers = _image.layers[::-1] if invert_order else _image.layers
     x = 0
@@ -244,6 +252,7 @@ def export_spritesheet(filename, image, offset, spacing, upscale_factor):
         image.base_type)
 
     pdb.gimp_context_set_interpolation(0)
+    add_offsets_to_image(export_img)
 
     row = 0
     col = 0
