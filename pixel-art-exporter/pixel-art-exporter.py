@@ -83,14 +83,18 @@ def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_w
     }
     write_obj_to_file_as_json(annotation, filename + ".json")
 
+def get_tileset_row_count(layer_count):
+    n_tiles_per_row = int(round(math.sqrt(layer_count)))
+    n_rows = int(layer_count / n_tiles_per_row)
+    if (n_tiles_per_row * n_rows) % layer_count != 0:
+        n_rows += 1 # There are some extra tiles
+    return (n_tiles_per_row, n_rows)
+
 def export_tileset(filename, _image, offset, spacing, upscale_factor, invert_order):
     log("export_tileset({}, {}, {}, {})".format(filename, offset, spacing, upscale_factor))
 
     n_layers = len(_image.layers)
-    n_tiles_per_row = int(math.sqrt(n_layers))
-    n_rows = n_layers / n_tiles_per_row
-    if n_tiles_per_row % n_layers != 0:
-        n_rows += 1 # There are some extra tiles
+    (n_tiles_per_row, n_rows) = get_tileset_row_count(n_layers)
 
     output_width = n_tiles_per_row * _image.width + spacing * (n_tiles_per_row - 1) + offset * 2
     output_height = n_rows * _image.height + spacing * (n_rows - 1) + offset * 2
@@ -410,9 +414,43 @@ def close_plugin_window(ret):
 def spritetilesetize_plugin_entry(_image, _drawable):
     log("Plugin entry point")
 
+    test_tileset_dimension_computation()
     build_gui(_image)
     
     gtk.main()
+
+def assert_eq(a, b, msg):
+    if (a != b):
+        log("{}: Not equal! {} {}".format(msg, a, b))
+
+def test_tileset_dimension_computation():
+    (cols1, rows1) = get_tileset_row_count(1)
+    assert_eq(cols1, 1, "get_tileset_row_count(1)/cols")
+    assert_eq(rows1, 1, "get_tileset_row_count(1)/rows")
+    
+    (cols2, rows2) = get_tileset_row_count(2)
+    assert_eq(cols2, 1, "get_tileset_row_count(2)/cols")
+    assert_eq(rows2, 2, "get_tileset_row_count(2)/rows")
+
+    (cols3, rows3) = get_tileset_row_count(3)
+    assert_eq(cols3, 2, "get_tileset_row_count(3)/cols")
+    assert_eq(rows3, 2, "get_tileset_row_count(3)/rows")
+
+    (cols4, rows4) = get_tileset_row_count(4)
+    assert_eq(cols4, 2, "get_tileset_row_count(4)/cols")
+    assert_eq(rows4, 2, "get_tileset_row_count(4)/rows")
+
+    (cols5, rows5) = get_tileset_row_count(5)
+    assert_eq(cols5, 2, "get_tileset_row_count(5)/cols")
+    assert_eq(rows5, 3, "get_tileset_row_count(5)/rows")
+
+    (cols6, rows6) = get_tileset_row_count(6)
+    assert_eq(cols6, 2, "get_tileset_row_count(6)/cols")
+    assert_eq(rows6, 3, "get_tileset_row_count(6)/rows")
+
+    (cols7, rows7) = get_tileset_row_count(7)
+    assert_eq(cols7, 3, "get_tileset_row_count(7)/cols")
+    assert_eq(rows7, 3, "get_tileset_row_count(7)/rows")
 
 ######################
 ##### Run script #####
