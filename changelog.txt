@@ -1,4 +1,4 @@
-v1.x.x changelog:
+v1.0.1 changelog:
  * Fixed Tilesetize exporting wrong annotations in regards to dgm-lib
  * Fixed Tilesetize exporting wrong bounds height in some cases
  * Fixed Spritesheetize / Tilesetize not exporting offsets around the image
