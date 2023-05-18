@@ -88,7 +88,7 @@ def export_tileset_annotations(filename, offset, spacing, upscale_factor, tile_w
             "height": int((nrows * tile_height + (nrows - 1) * spacing) * upscale_factor)
         }
     }
-    write_obj_to_file_as_json(annotation, filename + ".json")
+    write_obj_to_file_as_json(annotation, filename + ".clip")
 
 def get_tileset_row_count(layer_count):
     n_tiles_per_row = int(round(math.sqrt(layer_count)))
@@ -230,7 +230,7 @@ def export_spritesheet_annotations(filename, offset, spacing, upscale_factor, fr
         col = 0
         row += 1
 
-    write_obj_to_file_as_json(annotation, filename + ".json")
+    write_obj_to_file_as_json(annotation, filename + ".anim")
 
 def export_spritesheet(filename, image, offset, spacing, upscale_factor):
     log("export_spritesheet({}, {}, {})".format(filename, offset, spacing))

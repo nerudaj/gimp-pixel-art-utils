@@ -1,3 +1,9 @@
+v1.x.x changelog:
+ * Changed file extension of annotation files in pixel-art-exporter
+	* Tileset has extension .clip
+	* Spritesheetize has extension .anim
+	* They are still JSONs, but this way they can be programmatically distinguished
+
 v1.0.1 changelog:
  * Fixed Tilesetize exporting wrong annotations in regards to dgm-lib
  * Fixed Tilesetize exporting wrong bounds height in some cases
