@@ -12,13 +12,13 @@ from gi.repository import Gtk
 from gi.repository import Gegl
 import sys
 
-plug_in_proc = "plug-in-nerudaj-make-tiles"
-plug_in_binary = "py3-make-tiles"
+plug_in_proc = "plug-in-nerudaj-load-as-tiles"
+plug_in_binary = "py3-load-as-tiles"
 plug_in_author = "nerudaj"
 plug_in_org = "Pixel Art Utils"
 plug_in_year = "2025"
 plug_in_docs = "Load an image and break it into tiles"
-plug_in_name = "Make Tiles"
+plug_in_name = "Load as tiles"
 plug_in_path = "<Image>/Pixel Art"
 
 def log(message):
@@ -39,6 +39,28 @@ def create_dialog_with_all_procedure_params(procedure, config):
         return procedure.new_return_values(Gimp.PDBStatusType.CANCEL, None)
     else:
         dialog.destroy()
+
+def copy_area_between_images(source_image, destination_image, rect, layer_name):
+    layer = Gimp.Layer.new(image,
+                           layer_name,
+                           rect.framew,
+                           rect.frameh,
+                           image.get_base_type(),
+                           100,
+                           Gimp.LayerMode.NORMAL)
+    image.insert_layer(layer, None, 0)
+
+    input_image.select_rectangle(Gimp.ChannelOps.REPLACE,
+                                 rect.x,
+                                 rect.y,
+                                 rect.framew,
+                                 rect.frameh)
+    
+    Gimp.edit_copy([input_image.get_layers()[0]])
+    sel = Gimp.edit_paste(layer, True)
+    for sl in sel:
+        Gimp.floating_sel_attach(sl, layer)
+        Gimp.floating_sel_remove(sl)
 
 def spritify_run(procedure, run_mode, image, drawables, config, data):
     print("Hello world")
@@ -69,21 +91,10 @@ def spritify_run(procedure, run_mode, image, drawables, config, data):
         x = xoffset
         while x < in_w:
             log(f"[{x}, {y}] / [{in_w}, {in_h}]")
-            layer = Gimp.Layer.new(image,
-                           f"layer{idx}",
-                           framew,
-                           frameh,
-                           image.get_base_type(),
-                           100,
-                           Gimp.LayerMode.NORMAL)
-            image.insert_layer(layer, None, 0)
-
-            input_image.select_rectangle(Gimp.ChannelOps.REPLACE, x, y, framew, frameh)
-            Gimp.edit_copy([input_image.get_layers()[0]])
-            sel = Gimp.edit_paste(layer, True)
-            for sl in sel:
-                Gimp.floating_sel_attach(sl, layer)
-                Gimp.floating_sel_remove(sl)
+            copy_area_between_images(input_image,
+                                     image,
+                                     Gegl.Rectangle.new(x, y, framew, frameh),
+                                     f"layer_{idx}")
 
             idx = idx + 1
             x = x + framew + xspacing
