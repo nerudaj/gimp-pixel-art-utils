@@ -1,58 +1,77 @@
-#! /usr/bin/python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-from gimpfu import *
-import gtk
-import gimpui
-import gobject
+import gi
+gi.require_version('Gimp', '3.0')
+from gi.repository import Gimp
+gi.require_version('GimpUi', '3.0')
+from gi.repository import GimpUi
+from gi.repository import GObject
+from gi.repository import GLib
+from gi.repository import Gtk
+from gi.repository import Gegl
+import sys
 
-def build_gui():
-    pdb.gimp_message("build_gui")
+plug_in_proc = "plug-in-nerudaj-template"
+plug_in_binary = "py3-template"
+plug_in_author = "nerudaj"
+plug_in_org = "Pixel Art Utils"
+plug_in_year = "2025"
+plug_in_docs = "Docstring"
+plug_in_name = "Template"
+plug_in_path = "<Image>/Pixel Art"
 
-    horizontal_spacing = 10
-    vertical_spacing = 0
+def log(message):
+    proc = Gimp.get_pdb().lookup_procedure("gimp-message")
+    config = proc.create_config()
+    config.set_property("message", message)
+    proc.run(config)
 
-    window = gtk.Window()
-    window.set_title("Plugin template")
-    window.connect('destroy',  close_plugin_window)
-    window_box = gtk.VBox()
-    window.add(window_box)
-    window.set_keep_above(True)
+def create_dialog_with_all_procedure_params(procedure, config):
+    # Render UI
+    GimpUi.init(plug_in_binary)
 
-#    display_box = gtk.HBox()
-#    window_box.pack_start(display_box, True, True, vertical_spacing)
+    dialog = GimpUi.ProcedureDialog.new(procedure, config, plug_in_name)
+    dialog.fill()
 
-    window.show_all()
+    if not dialog.run():
+        dialog.destroy()
+        return procedure.new_return_values(Gimp.PDBStatusType.CANCEL, None)
+    else:
+        dialog.destroy()
 
+def spritify_run(procedure, run_mode, image, drawables, config, data):
+    if run_mode == Gimp.RunMode.INTERACTIVE:
+        create_dialog_with_all_procedure_params(procedure, config)
 
-def close_plugin_window(ret):
-    pdb.gimp_message("Plugin exit point")
-    gtk.main_quit()
+    # infile = config.get_property("infile")
 
-def template_plugin_entry(_image, _drawable):
-    pdb.gimp_message("Plugin entry point")
+    return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
 
-    build_gui()
-    
-    gtk.main()
+class Spritify (Gimp.PlugIn):
+    def do_query_procedures(self):
+        return [ plug_in_proc ]
 
-######################
-##### Run script #####
-######################
+    def do_create_procedure(self, name):
+        print("test")
+        if name != plug_in_proc:
+            return None
 
-register(
-          "template_plugin_entry",
-          "Description",
-          "Description",
-          "doomista",
-          "Apache 2 license",
-          "2022",
-          "Template",
-          "*",
-          [
-              (PF_IMAGE, "image", "Input image", None),
-              (PF_DRAWABLE, "drawable", "Input drawable", None),
-          ],
-          [],
-          template_plugin_entry, menu="<Image>/Tools/Pixel Art")
-main()
+        procedure = Gimp.ImageProcedure.new(self,
+                                            name,
+                                            Gimp.PDBProcType.PLUGIN,
+                                            spritify_run,
+                                            None)
 
+        procedure.set_sensitivity_mask(Gimp.ProcedureSensitivityMask.DRAWABLE |
+                                       Gimp.ProcedureSensitivityMask.NO_DRAWABLES)
+        procedure.set_menu_label(plug_in_name)
+        procedure.set_attribution(plug_in_author, plug_in_org, plug_in_year)
+        procedure.add_menu_path(plug_in_path)
+        procedure.set_documentation(plug_in_docs, None)
+
+        # Add arguments
+
+        return procedure
+
+Gimp.main(Spritify.__gtype__, sys.argv)
