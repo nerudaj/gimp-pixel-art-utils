@@ -22,13 +22,13 @@ plug_in_docs = "Export layers as spritesheet / tilesheet"
 plug_in_name = "Spritesheetize"
 plug_in_path = "<Image>/Pixel Art"
 
-def log(message):
+def log(message: str):
     proc = Gimp.get_pdb().lookup_procedure("gimp-message")
     config = proc.create_config()
     config.set_property("message", message)
     proc.run(config)
 
-def create_dialog_with_all_procedure_params(procedure, config):
+def create_dialog_with_all_procedure_params(procedure: Gimp.Procedure, config):
     # Render UI
     GimpUi.init(plug_in_binary)
 
@@ -41,42 +41,52 @@ def create_dialog_with_all_procedure_params(procedure, config):
     else:
         dialog.destroy()
 
-def get_tileset_row_count(layer_count):
+def copy_layer_to_image(layer: Gimp.Layer,
+                        target_image: Gimp.Image,
+                        x: int, y: int):
+    temp_layer = Gimp.Layer.new_from_drawable(layer, target_image)
+    temp_layer.set_visible(True)
+    temp_layer.add_alpha()
+
+    target_image.insert_layer(temp_layer, None, 0)
+    temp_layer.transform_translate(x, y)
+
+def get_tileset_row_count(layer_count: int) -> tuple[int, int]:
     n_tiles_per_row = int(round(math.sqrt(layer_count)))
     n_rows = int(layer_count / n_tiles_per_row)
     if (n_tiles_per_row * n_rows) % layer_count != 0:
         n_rows += 1 # There are some extra tiles
     return (n_tiles_per_row, n_rows)
 
-def tilesetize(image, xoffset, yoffset, xspacing, yspacing):
+def tilesetize(image: Gimp.Image,
+               xoffset: int, yoffset: int,
+               xspacing: int, yspacing: int):
     layers = image.get_layers()
 
-    tiles_per_row = get_tileset_row_count(len(layers))
-    row_count = math.ceil(len(layers) / tiles_per_row)
+    (tiles_per_row, row_count) = get_tileset_row_count(len(layers))
     
     framew = image.get_width()
     frameh = image.get_height()
     
-    img_width = tiles_per_row * framew + 2 * xoffset + (tiles_per_row - 1) * xspacing
-    img_height = row_count * frameh + 2 * yoffset + (row_count - 1) * yspacing
+    out_image = Gimp.Image.new(
+        tiles_per_row * framew + 2 * xoffset + (tiles_per_row - 1) * xspacing,
+        row_count * frameh + 2 * yoffset + (row_count - 1) * yspacing,
+        image.get_base_type())
     
-    out_image = Gimp.Image.new(img_width, img_height, image.get_base_type())
-    
-    row = 0
     for idx in range(0, len(layers)):
-        x = xoffset + (idx % tiles_per_row) * (framew + xspacing)
-        y = yoffset + math.floor(idx / tiles_per_row) * (frameh + yspacing)
+        copy_layer_to_image(layers[idx],
+                            out_image,
+                            xoffset + (idx % tiles_per_row) * (framew + xspacing),
+                            yoffset + math.floor(idx / tiles_per_row) * (frameh + yspacing))
         
-        temp_layer = Gimp.Layer.new_from_drawable(layers[idx], out_image)
-        temp_layer.set_visible(True)
-        temp_layer.add_alpha()
-
-        out_image.insert_layer(temp_layer, None, 0)
-        temp_layer.transform_translate(x, y)
-    
     return out_image
 
-def spritify_run(procedure, run_mode, image, drawables, config, data):
+def spritify_run(procedure: Gimp.Procedure,
+                 run_mode: Gimp.RunMode,
+                 image: Gimp.Image,
+                 drawables,
+                 config,
+                 data):
     if run_mode == Gimp.RunMode.INTERACTIVE:
         create_dialog_with_all_procedure_params(procedure, config)
 
@@ -108,7 +118,7 @@ class Spritify (Gimp.PlugIn):
     def do_query_procedures(self):
         return [ plug_in_proc ]
 
-    def do_create_procedure(self, name):
+    def do_create_procedure(self, name: str):
         print("test")
         if name != plug_in_proc:
             return None
