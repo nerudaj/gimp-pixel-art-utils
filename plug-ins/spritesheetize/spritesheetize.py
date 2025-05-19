@@ -71,7 +71,7 @@ def tilesetize(image, xoffset, yoffset, xspacing, yspacing):
         temp_layer.set_visible(True)
         temp_layer.add_alpha()
 
-        out_image.insert_layer(layer, None, 0)
+        out_image.insert_layer(temp_layer, None, 0)
         temp_layer.transform_translate(x, y)
     
     return out_image
