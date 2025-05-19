@@ -12,6 +12,7 @@ from gi.repository import Gtk
 from gi.repository import Gegl
 import sys
 import math
+import json
 
 plug_in_proc = "plug-in-nerudaj-spritesheetize"
 plug_in_binary = "py3-spritesheetize"
@@ -51,6 +52,37 @@ def copy_layer_to_image(layer: Gimp.Layer,
     target_image.insert_layer(temp_layer, None, 0)
     temp_layer.transform_translate(x, y)
 
+def write_obj_to_file_as_json(obj, filename):
+    fp = open(filename, "wt")
+    json.dump(obj, fp, indent=4)
+    fp.close()
+
+def export_tileset_annotations(filename: str,
+                               framew: int, frameh: int,
+                               xoffset: int, yoffset: int,
+                               xspacing: int, yspacing: int,
+                               upscale_factor: int,
+                               items_per_row: int,
+                               nrows: int):
+    annotation = {
+        "frame": {
+            "width": int(framew * upscale_factor),
+            "height": int(frameh * upscale_factor),
+        },
+        "spacing": {
+            "width": int(xspacing * upscale_factor),
+            "height": int(yspacing * upscale_factor),
+        },
+        "bounds": {
+            "left": int(xoffset * upscale_factor),
+            "right": int(yoffset * upscale_factor),
+            "width": int((items_per_row * framew + (items_per_row - 1) * xspacing) * upscale_factor),
+            "height": int((nrows * frameh + (nrows - 1) * yspacing) * upscale_factor)
+        }
+    }
+
+    write_obj_to_file_as_json(annotation, filename + ".clip")
+
 def get_tileset_row_count(layer_count: int) -> tuple[int, int]:
     n_tiles_per_row = int(round(math.sqrt(layer_count)))
     n_rows = int(layer_count / n_tiles_per_row)
@@ -60,7 +92,7 @@ def get_tileset_row_count(layer_count: int) -> tuple[int, int]:
 
 def tilesetize(image: Gimp.Image,
                xoffset: int, yoffset: int,
-               xspacing: int, yspacing: int):
+               xspacing: int, yspacing: int) -> tuple[Gimp.Image, int, int]:
     layers = image.get_layers()
 
     (tiles_per_row, row_count) = get_tileset_row_count(len(layers))
@@ -72,14 +104,16 @@ def tilesetize(image: Gimp.Image,
         tiles_per_row * framew + 2 * xoffset + (tiles_per_row - 1) * xspacing,
         row_count * frameh + 2 * yoffset + (row_count - 1) * yspacing,
         image.get_base_type())
+    # TODO: pdb.gimp_context_set_interpolation(0)
     
     for idx in range(0, len(layers)):
+        # TODO: scaling
         copy_layer_to_image(layers[idx],
                             out_image,
                             xoffset + (idx % tiles_per_row) * (framew + xspacing),
                             yoffset + math.floor(idx / tiles_per_row) * (frameh + yspacing))
         
-    return out_image
+    return (out_image, tiles_per_row, row_count)
 
 def spritify_run(procedure: Gimp.Procedure,
                  run_mode: Gimp.RunMode,
@@ -92,23 +126,31 @@ def spritify_run(procedure: Gimp.Procedure,
 
     outfile = config.get_property("outfile")
     do_spritesheetize = config.get_property("groups-are-animations")
+    upscale_factor = config.get_property("upscale-factor")
     xoffset = config.get_property("xoffset")
     yoffset = config.get_property("yoffset")
     xspacing = config.get_property("xspacing")
     yspacing = config.get_property("yspacing")
 
-    out_image = None
     if do_spritesheetize:
         a = 1
     else:
-        out_image = tilesetize(image,
+        (out_image, tiles_per_row, row_count) = tilesetize(image,
                                xoffset, yoffset,
-                               xspacing, yspacing)
+                               xspacing, yspacing,
+                               upscale_factor)
 
     Gimp.file_save(Gimp.RunMode.NONINTERACTIVE,
                    out_image,
                    outfile,
                    None)
+    
+    export_tileset_annotations("",
+                               image.get_width(), image.get_height(),
+                               xoffset, yoffset,
+                               xspacing, yspacing,
+                               upscale_factor,
+                               tiles_per_row, row_count)
 
     # TODO: export annotations
 
@@ -151,6 +193,14 @@ class Spritify (Gimp.PlugIn):
                                        None,
                                        False,
                                        GObject.ParamFlags.READWRITE)
+        
+        procedure.add_int_argument("upscale-factor",
+                                    "Upscale factor",
+                                    None,
+                                    1,
+                                    16,
+                                    1,
+                                    GObject.ParamFlags.READWRITE)
 
         procedure.add_int_argument("xoffset",
                                     "Horizontal padding",
