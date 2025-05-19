@@ -32,7 +32,16 @@ def create_dialog_with_all_procedure_params(procedure, config):
     GimpUi.init(plug_in_binary)
 
     dialog = GimpUi.ProcedureDialog.new(procedure, config, plug_in_name)
-    dialog.fill()
+    frame_box = dialog.fill_box("frame-box", ["frame-width", "frame-height"])
+    frame_box.set_orientation (Gtk.Orientation.HORIZONTAL)
+    offset_box = dialog.fill_box("offset-box", ["xoffset", "yoffset"])
+    offset_box.set_orientation (Gtk.Orientation.HORIZONTAL)
+    spacing_box = dialog.fill_box("spacing-box", ["xspacing", "yspacing"])
+    spacing_box.set_orientation (Gtk.Orientation.HORIZONTAL)
+    dialog.fill_frame("dimensions-frame", "frame-width", False, "frame-box")
+    dialog.fill_frame("dimensions-offset", "xoffset", False, "offset-box")
+    dialog.fill_frame("dimensions-spacing", "xspacing", False, "spacing-box")
+    dialog.fill(["infile", "dimensions-frame", "dimensions-offset", "dimensions-spacing"])
 
     if not dialog.run():
         dialog.destroy()
@@ -41,22 +50,22 @@ def create_dialog_with_all_procedure_params(procedure, config):
         dialog.destroy()
 
 def copy_area_between_images(source_image, destination_image, rect, layer_name):
-    layer = Gimp.Layer.new(image,
+    layer = Gimp.Layer.new(destination_image,
                            layer_name,
                            rect.framew,
                            rect.frameh,
-                           image.get_base_type(),
+                           destination_image.get_base_type(),
                            100,
                            Gimp.LayerMode.NORMAL)
-    image.insert_layer(layer, None, 0)
+    destination_image.insert_layer(layer, None, 0)
 
-    input_image.select_rectangle(Gimp.ChannelOps.REPLACE,
+    source_image.select_rectangle(Gimp.ChannelOps.REPLACE,
                                  rect.x,
                                  rect.y,
                                  rect.framew,
                                  rect.frameh)
     
-    Gimp.edit_copy([input_image.get_layers()[0]])
+    Gimp.edit_copy([source_image.get_layers()[0]])
     sel = Gimp.edit_paste(layer, True)
     for sl in sel:
         Gimp.floating_sel_attach(sl, layer)
