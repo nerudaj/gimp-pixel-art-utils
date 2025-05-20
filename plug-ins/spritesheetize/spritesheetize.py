@@ -14,6 +14,8 @@ import sys
 import math
 import json
 
+from typing import Self
+
 plug_in_proc = "plug-in-nerudaj-spritesheetize"
 plug_in_binary = "py3-spritesheetize"
 plug_in_author = "nerudaj"
@@ -22,6 +24,40 @@ plug_in_year = "2025"
 plug_in_docs = "Export layers as spritesheet / tilesheet"
 plug_in_name = "Spritesheetize"
 plug_in_path = "<Image>/Pixel Art"
+
+class Vector2d:
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
+    
+    def get_scaled(self, factor: int) -> Self:
+        return Vector2d(self.x * factor, self.y * factor)
+    
+    def to_json(self) -> dict[str, str]:
+        return {
+            "width": int(self.x),
+            "height": int(self.y)
+        }
+
+class Box:
+    def __init__(self, position: Vector2d, size: Vector2d):
+        self.position = position
+        self.size = size
+
+    def to_json(self) -> dict[str, str]:
+        return {
+            "left": int(self.position.x),
+            "top": int(self.position.y),
+            "width": int(self.size.x),
+            "height": int(self.size.y)
+        }
+
+class ExportOptions:
+    def __init__(self, offset: Vector2d, spacing: Vector2d, upscale_factor: int, invert_clips: bool):
+        self.offset = offset
+        self.spacing = spacing
+        self.scaling_factor = upscale_factor
+        self.invert_clips = invert_clips
 
 def log(message: str):
     proc = Gimp.get_pdb().lookup_procedure("gimp-message")
@@ -58,27 +94,18 @@ def write_obj_to_file_as_json(obj, filename):
     fp.close()
 
 def export_tileset_annotations(filename: str,
-                               framew: int, frameh: int,
-                               xoffset: int, yoffset: int,
-                               xspacing: int, yspacing: int,
-                               upscale_factor: int,
+                               frame_size: Vector2d,
+                               options: ExportOptions,
                                items_per_row: int,
                                nrows: int):
+    bounds_width = int((items_per_row * frame_size.x + (items_per_row - 1) * options.spacing.x) * options.scaling_factor)
+    bounds_height = int((nrows * frame_size.y + (nrows - 1) * options.spacing.y) * options.scaling_factor)
+
     annotation = {
-        "frame": {
-            "width": int(framew * upscale_factor),
-            "height": int(frameh * upscale_factor),
-        },
-        "spacing": {
-            "width": int(xspacing * upscale_factor),
-            "height": int(yspacing * upscale_factor),
-        },
-        "bounds": {
-            "left": int(xoffset * upscale_factor),
-            "right": int(yoffset * upscale_factor),
-            "width": int((items_per_row * framew + (items_per_row - 1) * xspacing) * upscale_factor),
-            "height": int((nrows * frameh + (nrows - 1) * yspacing) * upscale_factor)
-        }
+        "frame": frame_size.get_scaled(options.scaling_factor).to_json(),
+        "spacing": options.spacing.get_scaled(options.scaling_factor).to_json(),
+        "bounds": Box(options.offset.get_scaled(options.scaling_factor),
+                      Vector2d(bounds_width, bounds_height)).to_json()
     }
 
     write_obj_to_file_as_json(annotation, filename + ".clip")
@@ -91,8 +118,7 @@ def get_tileset_row_count(layer_count: int) -> tuple[int, int]:
     return (n_tiles_per_row, n_rows)
 
 def tilesetize(image: Gimp.Image,
-               xoffset: int, yoffset: int,
-               xspacing: int, yspacing: int) -> tuple[Gimp.Image, int, int]:
+               options: ExportOptions) -> tuple[Gimp.Image, int, int]:
     layers = image.get_layers()
 
     (tiles_per_row, row_count) = get_tileset_row_count(len(layers))
@@ -101,19 +127,25 @@ def tilesetize(image: Gimp.Image,
     frameh = image.get_height()
     
     out_image = Gimp.Image.new(
-        tiles_per_row * framew + 2 * xoffset + (tiles_per_row - 1) * xspacing,
-        row_count * frameh + 2 * yoffset + (row_count - 1) * yspacing,
+        tiles_per_row * framew + 2 * options.offset.x + (tiles_per_row - 1) * options.spacing.x,
+        row_count * frameh + 2 * options.offset.y + (row_count - 1) * options.spacing.y,
         image.get_base_type())
-    # TODO: pdb.gimp_context_set_interpolation(0)
     
     for idx in range(0, len(layers)):
-        # TODO: scaling
         copy_layer_to_image(layers[idx],
                             out_image,
-                            xoffset + (idx % tiles_per_row) * (framew + xspacing),
-                            yoffset + math.floor(idx / tiles_per_row) * (frameh + yspacing))
-        
+                            options.offset.x + (idx % tiles_per_row) * (framew + options.spacing.x),
+                            options.offset.y + math.floor(idx / tiles_per_row) * (frameh + options.spacing.y))
+    
+    Gimp.context_set_interpolation(Gimp.InterpolationType.LINEAR)
+    out_image.scale(out_image.get_width() * options.scaling_factor,
+                    out_image.get_height() * options.scaling_factor)
+
     return (out_image, tiles_per_row, row_count)
+
+def spritesheetize(image: Gimp.Image,
+                   options: ExportOptions):
+    pass
 
 def spritify_run(procedure: Gimp.Procedure,
                  run_mode: Gimp.RunMode,
@@ -126,34 +158,26 @@ def spritify_run(procedure: Gimp.Procedure,
 
     outfile = config.get_property("outfile")
     do_spritesheetize = config.get_property("groups-are-animations")
-    upscale_factor = config.get_property("upscale-factor")
-    xoffset = config.get_property("xoffset")
-    yoffset = config.get_property("yoffset")
-    xspacing = config.get_property("xspacing")
-    yspacing = config.get_property("yspacing")
 
-    if do_spritesheetize:
-        a = 1
-    else:
-        (out_image, tiles_per_row, row_count) = tilesetize(image,
-                               xoffset, yoffset,
-                               xspacing, yspacing,
-                               upscale_factor)
+    options = ExportOptions(Vector2d(config.get_property("xoffset"),
+                                     config.get_property("yoffset")),
+                            Vector2d(config.get_property("xspacing"),
+                                     config.get_property("yspacing")),
+                            config.get_property("upscale-factor"),
+                            False)
+
+
+    (out_image, tiles_per_row, row_count) = tilesetize(image, options)
 
     Gimp.file_save(Gimp.RunMode.NONINTERACTIVE,
                    out_image,
                    outfile,
                    None)
     
-    export_tileset_annotations("",
-                               image.get_width(), image.get_height(),
-                               xoffset, yoffset,
-                               xspacing, yspacing,
-                               upscale_factor,
+    export_tileset_annotations(outfile.get_path(),
+                               Vector2d(image.get_width(), image.get_height()),
+                               options,
                                tiles_per_row, row_count)
-
-    # TODO: export annotations
-
     return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
 
 class Spritify (Gimp.PlugIn):
@@ -161,7 +185,6 @@ class Spritify (Gimp.PlugIn):
         return [ plug_in_proc ]
 
     def do_create_procedure(self, name: str):
-        print("test")
         if name != plug_in_proc:
             return None
 
