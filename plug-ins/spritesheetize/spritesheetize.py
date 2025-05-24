@@ -169,7 +169,7 @@ def tilesetize(image: Gimp.Image,
                             options.offset.x + columnIdx * (image.get_width() + options.spacing.x),
                             options.offset.y + rowIdx * (image.get_height() + options.spacing.y))
     
-    Gimp.context_set_interpolation(Gimp.InterpolationType.LINEAR)
+    Gimp.context_set_interpolation(Gimp.InterpolationType.NONE)
     out_image.scale(out_image.get_width() * options.scaling_factor,
                     out_image.get_height() * options.scaling_factor)
 
@@ -240,6 +240,10 @@ def spritesheetize(image: Gimp.Image,
                                     options.offset.y + rowIdx * (image.get_height() + options.spacing.y))
                 columnIdx += 1
     
+    Gimp.context_set_interpolation(Gimp.InterpolationType.NONE)
+    out_image.scale(out_image.get_width() * options.scaling_factor,
+                    out_image.get_height() * options.scaling_factor)
+
     return (out_image, fitted_groups)
 
 
