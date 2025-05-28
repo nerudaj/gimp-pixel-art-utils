@@ -22,7 +22,7 @@ plug_in_name = "Tile Preview"
 plug_in_path = "<Image>/Pixel Art"
 
 class Dim:
-    def __init__(self, width, height):
+    def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
 
@@ -74,80 +74,75 @@ class RenderStrategyInterface:
         destination.insert_layer(temp_layer, None, 0)
         temp_layer.transform_translate(x, y)
 
-    def construct_preview(self, target, width, height, layer1, layer2):
+    def construct_preview(self, target, dim: Dim, layer1, layer2):
         pass
 
-    def get_image_dim(self, width: int, height: int, second_layer_is_valid: bool) -> Dim:
+    def get_image_dim(self, dim: Dim, second_layer_is_valid: bool) -> Dim:
         pass
 
 class RenderStrategyBlock(RenderStrategyInterface):
-    def construct_preview(self, target, width, height, layer1, layer2):
+    def construct_preview(self, target, dim: Dim, layer1, layer2):
         log("construct_preview")
         for y in range(0, 3):
             for x in range(0, 3):
                 use_layer2 = (y != 1 or x != 1) and layer2
-                log("before copy layer to")
                 self.copy_layer_to(
                     layer2 if use_layer2 else layer1,
                     target,
-                    x * width,
-                    y * height)
+                    x * dim.width,
+                    y * dim.height)
 
-    def get_image_dim(self, width, height, second_layer_is_valid):
+    def get_image_dim(self, dim: Dim, second_layer_is_valid: bool):
         return Dim(
-            int(width * 3.0),
-            int(height * 3.0))
+            int(dim.width * 3.0),
+            int(dim.height * 3.0))
 
 class RenderStrategyFloor(RenderStrategyInterface):
-    def construct_preview(self, target, width, height, layer1, layer2):
+    def construct_preview(self, target, dim: Dim, layer1, layer2):
         for x in range(0, 3):
             use_layer2 = (x != 1) and layer2
-            log("before copy layer to")
             self.copy_layer_to(
                 layer2 if use_layer2 else layer1,
                 target,
-                x * width, 0)
+                x * dim.width, 0)
 
-    def get_image_dim(self, width, height, second_layer_is_valid):
+    def get_image_dim(self, dim: Dim, second_layer_is_valid: bool):
         return Dim(
-            int(width * 3.0),
-            int(height))
+            int(dim.width * 3.0),
+            int(dim.height))
 
 class RenderStrategyVadj(RenderStrategyInterface):
-    def construct_preview(self, target, width, height, layer1, layer2):
-        log("before copy layer to")
+    def construct_preview(self, target, dim: Dim, layer1, layer2):
         self.copy_layer_to(
             layer1,
             target,
             0, 0)
         if layer2:
-            log("before copy layer to")
             self.copy_layer_to(
                 layer2,
                 target,
-                0, height)
+                0, dim.height)
 
-    def get_image_dim(self, width: int, height: int, second_layer_is_valid: bool) -> Dim:
+    def get_image_dim(self, dim: Dim, second_layer_is_valid: bool) -> Dim:
         return Dim(
-            int(width),
-            int(height * 2.0))
+            int(dim.width),
+            int(dim.height * 2.0))
 
 class RenderStrategyColumns(RenderStrategyInterface):
-    def construct_preview(self, target, width: int, height: int, layer1: Gimp.Layer, layer2: Gimp.Layer):
+    def construct_preview(self, target, dim: Dim, layer1: Gimp.Layer, layer2: Gimp.Layer):
         for y in range(0, 3):
             for x in range(0, 3):
                 use_layer2 = (x != 1) and layer2
-                log("before copy layer to")
                 self.copy_layer_to(
                     layer2 if use_layer2 else layer1,
                     target,
-                    x * width,
-                    y * height)
+                    x * dim.width,
+                    y * dim.height)
 
-    def get_image_dim(self, width: int, height: int, second_layer_is_valid: bool) -> Dim:
+    def get_image_dim(self, dim: Dim, second_layer_is_valid: bool) -> Dim:
         return Dim(
-            int(width * (3.0 if second_layer_is_valid else 1.0)),
-            int(height * 3.0))
+            int(dim.width * (3.0 if second_layer_is_valid else 1.0)),
+            int(dim.height * 3.0))
 
 class RenderStrategyFactory():
     @staticmethod
@@ -163,7 +158,7 @@ class RenderStrategyFactory():
         else:
             return RenderStrategyInterface()
 
-def log(message):
+def log(message: str):
     proc = Gimp.get_pdb().lookup_procedure("gimp-message")
     config = proc.create_config()
     config.set_property("message", message)
@@ -174,37 +169,37 @@ def create_vbox(parent: Gtk.Container, spacing: int = 0) -> Gtk.Box:
     if isinstance(parent, Gtk.Window):
         parent.add(box)
     else:
-        parent.pack_end(box, True, False, 0)
+        parent.pack_start(box, True, False, 0)
     return box
 
-def create_hbox(parent: Gtk.Container, spacing: int = 0) -> Gtk.Box:
-    box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, spacing)
-    parent.pack_start(box, True, False, 0)
+def create_hbox(parent: Gtk.Container, fill: bool = False) -> Gtk.Box:
+    box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+    parent.pack_start(box, fill, fill, 0)
     return box
 
-def create_label(text: str, parent: Gtk.Container, padding: int = 0):
+def create_label(text: str, parent: Gtk.Container, padding: int = 0) -> Gtk.Label:
     label = Gtk.Label.new(text)
-    parent.pack_start(label, True, True, padding)
+    parent.pack_start(label, True, False, padding)
     return label
 
-def create_button(label: str, parent: Gtk.Container, padding = 0):
+def create_button(label: str, parent: Gtk.Container, padding: int = 0) -> Gtk.Button:
     btn = Gtk.Button.new_with_label(label)
     parent.pack_start(btn, True, True, padding)
     return btn
 
-def create_value_input(value: int, parent: Gtk.Container, padding = 0):
+def create_value_input(value: int, parent: Gtk.Container, padding: int = 0) -> Gtk.Entry:
     input_entry = Gtk.Entry.new()
     input_entry.set_text(f"{value}")
-    parent.pack_start(input_entry, True, True, padding)
+    parent.pack_start(input_entry, False, False, padding)
     return input_entry
 
-def create_combo(values: list, parent: Gtk.Container, padding = 0):
+def create_combo(values: list, parent: Gtk.Container, padding: int = 0) -> Gtk.ComboBoxText:
     combo = Gtk.ComboBoxText.new()
 
     for value in values:
         combo.append_text(value)
 
-    parent.pack_start(combo, True, True, padding)
+    parent.pack_start(combo, False, False, padding)
     return combo
 
 def create_window(title: str) -> Gtk.Window:
@@ -215,18 +210,17 @@ def create_window(title: str) -> Gtk.Window:
     return window
 
 def get_preview_image(image_type,
-                      width: int,
-                      height: int,
+                      dim: Dim,
                       zoom: int,
                       mode: RenderMode,
                       layer1: Gimp.Layer,
                       layer2: Gimp.Layer,
                       gtk_ctx: GtkContext,
                       render_strategy):
-    log("get_preview_image({}, {}, {}, {}, {}, {})".format(width, height, zoom, mode, layer1, layer2))
+    log("get_preview_image({}, {}, {}, {}, {}, {})".format(dim.width, dim.height, zoom, mode, layer1, layer2))
 
     # Compute base image size
-    new_image_dim = render_strategy.get_image_dim(width, height, layer2)
+    new_image_dim = render_strategy.get_image_dim(dim, layer2)
 
     # Create temp image that will accomodate new layers
     if gtk_ctx.temp_img:
@@ -239,7 +233,7 @@ def get_preview_image(image_type,
         image_type)
     gtk_ctx.temp_img.undo_disable()
 
-    render_strategy.construct_preview(gtk_ctx.temp_img, width, height, layer1, layer2)
+    render_strategy.construct_preview(gtk_ctx.temp_img, dim, layer1, layer2)
 
     # Disable interpolation and zoom the image by scaling
     Gimp.context_set_interpolation(Gimp.InterpolationType.NONE)
@@ -270,7 +264,7 @@ def update_preview(widget: Gtk.Widget, context: PluginContext):
             gtk_ctx.display_box.remove(gtk_ctx.preview_box)
 
         gtk_ctx.preview_box = GimpUi.DrawablePreview.new_from_drawable(drawable)
-        gtk_ctx.display_box.pack_start(gtk_ctx.preview_box, True, True, 0)
+        gtk_ctx.display_box.pack_start(gtk_ctx.preview_box, False, True, 0)
 
         gtk_ctx.window.show_all()
 
@@ -287,8 +281,8 @@ def update_preview(widget: Gtk.Widget, context: PluginContext):
 
     layer_to_draw = get_preview_image(
         context.image_ref.get_base_type(),
-        context.image_ref.get_width(),
-        context.image_ref.get_height(),
+        Dim(context.image_ref.get_width(),
+            context.image_ref.get_height()),
         context.zoom_level,
         context.mode,
         layer1,
@@ -396,7 +390,7 @@ def tile_preview_run(procedure, run_mode: Gimp.RunMode, image: Gimp.Image, drawa
     zoom_btn.connect("clicked", zoom_in, context)
     log("3")
 
-    context.gtk_ctx.display_box = create_hbox(window_box)
+    context.gtk_ctx.display_box = create_hbox(window_box, fill=True)
     bottom_wrap_hbox = create_hbox(window_box)
     bottom_label_vbox = create_vbox(bottom_wrap_hbox)
     context.gtk_ctx.bottom_control_vbox = create_vbox(bottom_wrap_hbox)
