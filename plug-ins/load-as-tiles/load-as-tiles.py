@@ -118,7 +118,6 @@ class Spritify (Gimp.PlugIn):
         return [ plug_in_proc ]
 
     def do_create_procedure(self, name):
-        print("test")
         if name != plug_in_proc:
             return None
 

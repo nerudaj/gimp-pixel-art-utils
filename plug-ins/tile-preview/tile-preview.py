@@ -62,9 +62,7 @@ class PluginContext:
 
 class RenderStrategyInterface:
     def copy_layer_to(self, source: Gimp.Layer, destination: Gimp.Image, x: int, y: int):
-        log("copy layer to")
         def make_layer_visible_with_alpha(layer):
-            log("make_layer_visible_with_alpha")
             if len(layer.get_children()) == 0: # Cannot add alpha for layer group
                 layer.add_alpha()
             layer.set_visible(True)
@@ -82,7 +80,6 @@ class RenderStrategyInterface:
 
 class RenderStrategyBlock(RenderStrategyInterface):
     def construct_preview(self, target, dim: Dim, layer1, layer2):
-        log("construct_preview")
         for y in range(0, 3):
             for x in range(0, 3):
                 use_layer2 = (y != 1 or x != 1) and layer2
@@ -217,15 +214,14 @@ def get_preview_image(image_type,
                       layer2: Gimp.Layer,
                       gtk_ctx: GtkContext,
                       render_strategy):
-    log("get_preview_image({}, {}, {}, {}, {}, {})".format(dim.width, dim.height, zoom, mode, layer1, layer2))
 
     # Compute base image size
     new_image_dim = render_strategy.get_image_dim(dim, layer2)
 
     # Create temp image that will accomodate new layers
     if gtk_ctx.temp_img:
-        log("temp_img should be deleted, but how?")
         #gimp.delete(gtk_ctx.temp_img)
+        pass
 
     gtk_ctx.temp_img = Gimp.Image.new(
         new_image_dim.width,
@@ -249,17 +245,14 @@ def get_preview_image(image_type,
     return final_layer
 
 def update_preview(widget: Gtk.Widget, context: PluginContext):
-    log("update_preview({})".format(context))
 
     def get_layer_from_image(image: Gimp.Image, name: str) -> Gimp.Layer | None:
-        log(f"get_layer_from_image({image}, {name})")
         for layer in image.get_layers():
             if layer.get_name() == name:
                 return layer
         return None
 
     def redraw_preview(gtk_ctx: GtkContext, drawable: Gimp.Drawable):
-        log("redraw_preview()")
         if gtk_ctx.preview_box:
             gtk_ctx.display_box.remove(gtk_ctx.preview_box)
 
@@ -293,10 +286,8 @@ def update_preview(widget: Gtk.Widget, context: PluginContext):
     redraw_preview(context.gtk_ctx, layer_to_draw)
 
 def create_layer_select_combo(context: PluginContext, index: int, name_to_select=None):
-    log("create_layer_select_combo(index = {})".format(index))
 
     def get_image_layer_names(image: Gimp.Image, add_empty: bool = False) -> list[str]:
-        log(f"get_image_layer_names(add_empty={add_empty})")
         layer_names = []
 
         if add_empty:
@@ -307,7 +298,6 @@ def create_layer_select_combo(context: PluginContext, index: int, name_to_select
         return layer_names
 
     def update_layer_names(combo: Gtk.ComboBoxText, context: PluginContext, index: int):
-        log("update_layer_names({}, {})".format(index, combo.get_active_text()))
         context.layer_names[index] = combo.get_active_text()
         update_preview(None, context)
 
@@ -339,23 +329,18 @@ def create_layer_select_combo(context: PluginContext, index: int, name_to_select
     gtk_ctx.layer_select_combos[index] = combo
 
 def zoom_in(widget: Gtk.Widget, context: PluginContext):
-    log("zoom_in")
     context.zoom_level *= 2.0
     update_preview(None, context)
 
 def zoom_out(widget: Gtk.Widget, context: PluginContext):
-    log("zoom_out")
     context.zoom_level /= 2.0
     update_preview(None, context)
 
 def change_display_mode(widget: Gtk.Widget, context: PluginContext):
-    log("change_display_mode({})".format(context))
     context.mode = widget.get_active_text()
     update_preview(None, context)
 
 def refresh_combos(widget: Gtk.Widget, context: PluginContext, count: int):
-    log("refresh_combos({}, {})".format(context, count))
-
     names_to_select = ["", ""]
     for index in range(count):
         names_to_select[index] = context.gtk_ctx.layer_select_combos[index].get_active_text()
@@ -369,18 +354,15 @@ def refresh_combos(widget: Gtk.Widget, context: PluginContext, count: int):
 def tile_preview_run(procedure, run_mode: Gimp.RunMode, image: Gimp.Image, drawables: list, config, data):
     if run_mode != Gimp.RunMode.INTERACTIVE:
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
-    log("1")
 
     context = PluginContext(image)
 
     context.gtk_ctx.window = create_window(plug_in_name)
-    log("2")
 
     window_box = create_vbox(context.gtk_ctx.window)
     upper_wrap_hbox = create_hbox(window_box)
     upper_label_vbox = create_vbox(upper_wrap_hbox)
     upper_control_vbox = create_vbox(upper_wrap_hbox)
-    log("2")
 
     create_label("Zoom", upper_label_vbox)
     zoom_btn_box = create_hbox(upper_control_vbox)
@@ -388,13 +370,11 @@ def tile_preview_run(procedure, run_mode: Gimp.RunMode, image: Gimp.Image, drawa
     unzoom_btn.connect("clicked", zoom_out, context)
     zoom_btn = create_button("+", zoom_btn_box)
     zoom_btn.connect("clicked", zoom_in, context)
-    log("3")
 
     context.gtk_ctx.display_box = create_hbox(window_box, fill=True)
     bottom_wrap_hbox = create_hbox(window_box)
     bottom_label_vbox = create_vbox(bottom_wrap_hbox)
     context.gtk_ctx.bottom_control_vbox = create_vbox(bottom_wrap_hbox)
-    log("4")
 
     ### Mode select
     create_label("Preview mode", bottom_label_vbox)
@@ -411,7 +391,6 @@ def tile_preview_run(procedure, run_mode: Gimp.RunMode, image: Gimp.Image, drawa
     labels = [ "Primary layer", "Secondary layer" ]
     for label in labels:
         create_label(label, bottom_label_vbox)
-    log("5")
 
     context.skip_next_update = True
     for index in range(len(labels)):
