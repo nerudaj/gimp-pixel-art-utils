@@ -21,7 +21,7 @@ plug_in_docs = "Load an image and break it into tiles"
 plug_in_name = "Load as tiles"
 plug_in_path = "<Image>/Pixel Art"
 
-def log(message):
+def log(message: str):
     proc = Gimp.get_pdb().lookup_procedure("gimp-message")
     config = proc.create_config()
     config.set_property("message", message)
@@ -49,31 +49,30 @@ def create_dialog_with_all_procedure_params(procedure, config):
     else:
         dialog.destroy()
 
-def copy_area_between_images(source_image, destination_image, rect, layer_name):
+def copy_area_between_images(source_image: Gimp.Image, destination_image: Gimp.Image, rect: Gegl.Rectangle, layer_name: str):
     layer = Gimp.Layer.new(destination_image,
                            layer_name,
-                           rect.framew,
-                           rect.frameh,
+                           rect.width,
+                           rect.height,
                            destination_image.get_base_type(),
                            100,
                            Gimp.LayerMode.NORMAL)
+    layer.add_alpha()
     destination_image.insert_layer(layer, None, 0)
 
     source_image.select_rectangle(Gimp.ChannelOps.REPLACE,
                                  rect.x,
                                  rect.y,
-                                 rect.framew,
-                                 rect.frameh)
-    
+                                 rect.width,
+                                 rect.height)
+
     Gimp.edit_copy([source_image.get_layers()[0]])
     sel = Gimp.edit_paste(layer, True)
     for sl in sel:
         Gimp.floating_sel_attach(sl, layer)
         Gimp.floating_sel_remove(sl)
 
-def spritify_run(procedure, run_mode, image, drawables, config, data):
-    print("Hello world")
-
+def load_as_tiles_run(procedure, run_mode, image, drawables, config, data):
     if run_mode == Gimp.RunMode.INTERACTIVE:
         create_dialog_with_all_procedure_params(procedure, config)
 
@@ -88,7 +87,6 @@ def spritify_run(procedure, run_mode, image, drawables, config, data):
     input_image = Gimp.file_load(Gimp.RunMode.NONINTERACTIVE, infile)
 
     if input_image is None:
-        log("Image could not be loaded")
         return procedure.new_return_values (Gimp.PDBStatusType.CALLING_ERROR,
                                             GLib.Error(f"Could not load image {infile}"))
 
@@ -99,7 +97,6 @@ def spritify_run(procedure, run_mode, image, drawables, config, data):
     while y < in_h:
         x = xoffset
         while x < in_w:
-            log(f"[{x}, {y}] / [{in_w}, {in_h}]")
             copy_area_between_images(input_image,
                                      image,
                                      Gegl.Rectangle.new(x, y, framew, frameh),
@@ -113,7 +110,7 @@ def spritify_run(procedure, run_mode, image, drawables, config, data):
     Gimp.displays_flush()
     return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
 
-class Spritify (Gimp.PlugIn):
+class LoadAsTiles (Gimp.PlugIn):
     def do_query_procedures(self):
         return [ plug_in_proc ]
 
@@ -124,7 +121,7 @@ class Spritify (Gimp.PlugIn):
         procedure = Gimp.ImageProcedure.new(self,
                                             name,
                                             Gimp.PDBProcType.PLUGIN,
-                                            spritify_run,
+                                            load_as_tiles_run,
                                             None)
 
         procedure.set_sensitivity_mask(Gimp.ProcedureSensitivityMask.DRAWABLE |
@@ -193,4 +190,4 @@ class Spritify (Gimp.PlugIn):
 
         return procedure
 
-Gimp.main(Spritify.__gtype__, sys.argv)
+Gimp.main(LoadAsTiles.__gtype__, sys.argv)

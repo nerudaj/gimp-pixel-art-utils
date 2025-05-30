@@ -1,0 +1,16 @@
+{
+    "frame": {
+        "width": 100,
+        "height": 100
+    },
+    "spacing": {
+        "width": 16,
+        "height": 0
+    },
+    "bounds": {
+        "left": 0,
+        "top": 8,
+        "width": 216,
+        "height": 300
+    }
+}

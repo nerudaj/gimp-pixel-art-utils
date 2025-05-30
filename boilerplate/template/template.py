@@ -40,7 +40,7 @@ def create_dialog_with_all_procedure_params(procedure, config):
     else:
         dialog.destroy()
 
-def spritify_run(procedure, run_mode, image, drawables, config, data):
+def template_run(procedure, run_mode, image, drawables, config, data):
     if run_mode == Gimp.RunMode.INTERACTIVE:
         create_dialog_with_all_procedure_params(procedure, config)
 
@@ -48,19 +48,18 @@ def spritify_run(procedure, run_mode, image, drawables, config, data):
 
     return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
 
-class Spritify (Gimp.PlugIn):
+class Template (Gimp.PlugIn):
     def do_query_procedures(self):
         return [ plug_in_proc ]
 
     def do_create_procedure(self, name):
-        print("test")
         if name != plug_in_proc:
             return None
 
         procedure = Gimp.ImageProcedure.new(self,
                                             name,
                                             Gimp.PDBProcType.PLUGIN,
-                                            spritify_run,
+                                            template_run,
                                             None)
 
         procedure.set_sensitivity_mask(Gimp.ProcedureSensitivityMask.DRAWABLE |
@@ -74,4 +73,4 @@ class Spritify (Gimp.PlugIn):
 
         return procedure
 
-Gimp.main(Spritify.__gtype__, sys.argv)
+Gimp.main(Template.__gtype__, sys.argv)
