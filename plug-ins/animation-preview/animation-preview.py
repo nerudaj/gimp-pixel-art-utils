@@ -304,6 +304,7 @@ def animation_preview_run(procedure, run_mode, image, drawables, config, data):
     if run_mode != Gimp.RunMode.INTERACTIVE:
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
 
+    GimpUi.init(plug_in_binary)
     context = PluginContext(image)
     
     context.gtk_ctx.window = GtkBuilder.create_window(plug_in_name)
