@@ -33,10 +33,16 @@ class Vector2d:
     def get_scaled(self, factor: int) -> Self:
         return Vector2d(self.x * factor, self.y * factor)
     
-    def to_json(self) -> dict[str, int]:
+    def to_json_dim(self) -> dict[str, int]:
         return {
             "width": int(self.x),
             "height": int(self.y)
+        }
+
+    def to_json_dist(self)-> dict[str, int]:
+        return {
+            "horizontal": int(self.x),
+            "vertical": int(self.y)
         }
 
 class Box:
@@ -53,11 +59,19 @@ class Box:
         }
 
 class ExportOptions:
-    def __init__(self, offset: Vector2d, spacing: Vector2d, upscale_factor: int, invert_clips: bool):
+    def __init__(self,
+                 offset: Vector2d,
+                 spacing: Vector2d,
+                 upscale_factor: int,
+                 invert_clips: bool,
+                 enforce_tiles_per_row: bool,
+                 enforced_column_count: int):
         self.offset = offset
         self.spacing = spacing
         self.scaling_factor = upscale_factor
         self.invert_clips = invert_clips
+        self.enforce_tiles_per_row = enforce_tiles_per_row
+        self.enforced_column_count = enforced_column_count
 
 def log(message: str):
     proc = Gimp.get_pdb().lookup_procedure("gimp-message")
@@ -104,8 +118,8 @@ def export_tileset_annotations(filename: str,
     bounds_height = int((nrows * frame_size.y + (nrows - 1) * options.spacing.y) * options.scaling_factor)
 
     annotation = {
-        "frame": frame_size.get_scaled(options.scaling_factor).to_json(),
-        "spacing": options.spacing.get_scaled(options.scaling_factor).to_json(),
+        "frame": frame_size.get_scaled(options.scaling_factor).to_json_dim(),
+        "spacing": options.spacing.get_scaled(options.scaling_factor).to_json_dist(),
         "bounds": Box(options.offset.get_scaled(options.scaling_factor),
                       Vector2d(bounds_width, bounds_height)).to_json()
     }
@@ -118,8 +132,8 @@ def export_spritesheet_annotations(filename: str,
                                    fitted_groups: list[list[Gimp.GroupLayer]]):
     annotation = {
         "defaults": {
-            "frame": frame_size.get_scaled(options.scaling_factor).to_json(),
-            "spacing": frame_size.get_scaled(options.scaling_factor).to_json(),
+            "frame": frame_size.get_scaled(options.scaling_factor).to_json_dim(),
+            "spacing": frame_size.get_scaled(options.scaling_factor).to_json_dist(),
         },
         "states": []
     }
