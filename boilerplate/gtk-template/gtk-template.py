@@ -30,6 +30,8 @@ def log(message):
     proc.run(config)
 
 def gtk_template_run(procedure, run_mode, image, drawables, config, data):
+    GimpUi.init(plug_in_binary)
+
     if run_mode != Gimp.RunMode.INTERACTIVE:
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, None)
 
