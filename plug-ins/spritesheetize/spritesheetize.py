@@ -155,8 +155,12 @@ def export_spritesheet_annotations(filename: str,
     
     write_obj_to_file_as_json(annotation, filename + ".anim")
 
-def get_tileset_row_count(layer_count: int) -> tuple[int, int]:
-    n_tiles_per_row = int(round(math.sqrt(layer_count)))
+def get_tileset_row_count(layer_count: int, options: ExportOptions) -> tuple[int, int]:
+    if options.enforce_tiles_per_row and options.enforced_column_count > 0:
+        n_tiles_per_row = options.enforced_column_count
+    else:
+        n_tiles_per_row = int(round(math.sqrt(layer_count)))
+
     n_rows = int(layer_count / n_tiles_per_row)
     if (n_tiles_per_row * n_rows) % layer_count != 0:
         n_rows += 1 # There are some extra tiles
@@ -171,7 +175,7 @@ def tilesetize(image: Gimp.Image,
                options: ExportOptions) -> tuple[Gimp.Image, int, int]:
     layers = image.get_layers()
 
-    (tiles_per_row, row_count) = get_tileset_row_count(len(layers))
+    (tiles_per_row, row_count) = get_tileset_row_count(len(layers), options)
     
     out_image = create_out_image(image, options, tiles_per_row, row_count)
     
@@ -278,7 +282,9 @@ def spritify_run(procedure: Gimp.Procedure,
                             Vector2d(config.get_property("xspacing"),
                                      config.get_property("yspacing")),
                             config.get_property("upscale-factor"),
-                            False)
+                            False, # Invert clips
+                            config.get_property("enforce-row-count"),
+                            config.get_property("enforced-tiles-per-row"))
 
 
     if do_spritesheetize:
@@ -380,6 +386,20 @@ class Spritify (Gimp.PlugIn):
                                     1024,
                                     0,
                                     GObject.ParamFlags.READWRITE)
+
+        procedure.add_boolean_aux_argument("enforce-row-count",
+                                           "Enforce specific tiles per row",
+                                           None,
+                                           False,
+                                           GObject.ParamFlags.READWRITE)
+
+        procedure.add_int_aux_argument("enforced-tiles-per-row",
+                                       "Enforced tiles per row count",
+                                       None,
+                                       0,
+                                       16,
+                                       0,
+                                       GObject.ParamFlags.READWRITE)
 
         return procedure
 
