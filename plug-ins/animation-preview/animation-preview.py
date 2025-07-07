@@ -163,6 +163,10 @@ def zoom_out(widget, context: PluginContext):
     context.zoom_level = max(0.1, context.zoom_level - 0.1)
     update_preview(context, force=True)
 
+def reset_zoom(widget, context: PluginContext):
+    context.zoom_level = 1.0
+    update_preview(context, force=True)
+
 def update_preview(context: PluginContext, force: bool = False):
     if (force == context.playback.playing):
         return
@@ -345,6 +349,9 @@ def animation_preview_run(procedure, run_mode, image, drawables, config, data):
 
     zoom_in_btn = GtkBuilder.create_button("+", zoom_box)
     zoom_in_btn.connect("clicked", zoom_in, context)
+
+    reset_zoom_btn = GtkBuilder.create_button("Reset Zoom", zoom_box)
+    reset_zoom_btn.connect("clicked", reset_zoom, context)
 
     fps_label_box = GtkBuilder.create_hbox(labels_vbox, True)
     fps_controls_box = GtkBuilder.create_hbox(controls_vbox, False)
