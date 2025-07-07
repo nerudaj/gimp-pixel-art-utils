@@ -167,6 +167,28 @@ def reset_zoom(widget, context: PluginContext):
     context.zoom_level = 1.0
     update_preview(context, force=True)
 
+def zoom_to_fit(widget, context: PluginContext):
+    # Try to fit the current frame into the display box area
+    if not context.gtk_ctx.display_box or not context.active_layer_group:
+        return
+    # Get the preview area size
+    alloc = context.gtk_ctx.display_box.get_allocation()
+    preview_w = alloc.width
+    preview_h = alloc.height
+    # Get the image size
+    img_w = context.image_ref.get_width()
+    img_h = context.image_ref.get_height()
+    if img_w == 0 or img_h == 0:
+        return
+    # Compute zoom to fit, with a small margin (e.g. 2px)
+    margin = 2
+    zoom_x = (preview_w - margin) / img_w
+    zoom_y = (preview_h - margin) / img_h
+    context.zoom_level = min(zoom_x, zoom_y)
+    # Prevent zoom from being too small
+    context.zoom_level = max(0.1, context.zoom_level)
+    update_preview(context, force=True)
+
 def update_preview(context: PluginContext, force: bool = False):
     if (force == context.playback.playing):
         return
@@ -313,6 +335,7 @@ def animation_preview_run(procedure, run_mode, image, drawables, config, data):
     
     context.gtk_ctx.window = GtkBuilder.create_window(plug_in_name)
     context.gtk_ctx.window.connect("destroy", lambda w: Gtk.main_quit())
+    context.gtk_ctx.window.set_default_size(400, 660)
     window_box = GtkBuilder.create_vbox(context.gtk_ctx.window)
     current_layer_show_box = GtkBuilder.create_hbox(window_box, False)
     GtkBuilder.create_label("Current Layer:", current_layer_show_box)
@@ -352,6 +375,9 @@ def animation_preview_run(procedure, run_mode, image, drawables, config, data):
 
     reset_zoom_btn = GtkBuilder.create_button("Reset Zoom", zoom_box)
     reset_zoom_btn.connect("clicked", reset_zoom, context)
+
+    zoom_to_fit_btn = GtkBuilder.create_button("Zoom to Fit", zoom_box)
+    zoom_to_fit_btn.connect("clicked", zoom_to_fit, context)
 
     fps_label_box = GtkBuilder.create_hbox(labels_vbox, True)
     fps_controls_box = GtkBuilder.create_hbox(controls_vbox, False)
