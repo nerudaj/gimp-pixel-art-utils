@@ -175,7 +175,8 @@ class ZoomHandler:
 
     @staticmethod
     def zoom_to_fit(_: Gtk.Widget, context: PluginContext):
-        if not context.gtk_ctx.display_box or not context.active_layer_group:
+        if not context.gtk_ctx.display_box or not context.image_ref:
+            log("DEBUG: Zoom to fit called but display box or image reference is not set.")
             return
         
         img_w = context.image_ref.get_width()

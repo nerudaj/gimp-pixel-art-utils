@@ -214,7 +214,7 @@ class ProcedureHelper:
             config.set_property(prop_name, prop_value)
         proc.run(config)
 
-def log(message):
+def log(message: str):
     ProcedureHelper.call_pdb_procedure("gimp-message", [("message", message)])
 
 class ZoomHandler:
@@ -235,11 +235,12 @@ class ZoomHandler:
 
     @staticmethod
     def zoom_to_fit(_: Gtk.Widget, context: PluginContext):
-        if not context.gtk_ctx.display_box or not context.active_layer_group:
+        if not context.gtk_ctx.display_box or not context.image_ref:
+            log("DEBUG: Zoom to fit called but display box or image reference is not set.")
             return
         
-        img_w = context.image_ref.get_width()
-        img_h = context.image_ref.get_height()
+        img_w = context.image_ref.get_width() * 3
+        img_h = context.image_ref.get_height() * 3
         if img_w == 0 or img_h == 0:
             return
 
@@ -285,7 +286,8 @@ def get_preview_image(image_type,
 
     return final_layer
 
-def update_preview(context: PluginContext, force: bool):
+def update_preview(context: PluginContext, force: bool = False):
+
     def get_layer_from_image(image: Gimp.Image, name: str) -> Gimp.Layer | None:
         for layer in image.get_layers():
             if layer.get_name() == name:
