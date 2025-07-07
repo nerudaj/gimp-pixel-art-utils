@@ -21,6 +21,56 @@ plug_in_docs = "Plugin for previewing how layers appear when tiled."
 plug_in_name = "Tile Preview"
 plug_in_path = "<Image>/Pixel Art"
 
+class GtkBuilder:
+    @staticmethod
+    def create_window(title: str) -> Gtk.Window:
+        window = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
+        window.set_title(title)
+        window.set_keep_above(True)
+        return window
+
+    @staticmethod
+    def create_vbox(parent: Gtk.Container, padding: int = 0) -> Gtk.Box:
+        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        if isinstance(parent, Gtk.Window):
+            parent.add(box)
+        else:
+            parent.pack_start(box, True, False, padding)
+        return box
+
+    @staticmethod
+    def create_hbox(parent: Gtk.Container, fill: bool = False) -> Gtk.Box:
+        box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        parent.pack_start(box, fill, fill, 0)
+        return box
+
+    @staticmethod
+    def create_label(text: str, parent: Gtk.Container) -> Gtk.Label:
+        label = Gtk.Label.new(text)
+        parent.pack_start(label, True, False, 0)
+        return label
+
+    @staticmethod
+    def create_button(label: str, parent: Gtk.Container) -> Gtk.Button:
+        btn = Gtk.Button.new_with_label(label)
+        parent.pack_start(btn, True, True, 0)
+        return btn
+
+    @staticmethod
+    def create_value_input(value: int, parent: Gtk.Container) -> Gtk.Entry:
+        input_entry = Gtk.Entry.new()
+        input_entry.set_text(f"{value}")
+        parent.pack_start(input_entry, False, False, 0)
+        return input_entry
+
+    @staticmethod
+    def create_combo(values: list, parent: Gtk.Container) -> Gtk.ComboBoxText:
+        combo = Gtk.ComboBoxText.new()
+        for value in values:
+            combo.append_text(value)
+        parent.pack_start(combo, True, True, 0)
+        return combo
+
 class Dim:
     def __init__(self, width: int, height: int):
         self.width = width
@@ -155,56 +205,52 @@ class RenderStrategyFactory():
         else:
             return RenderStrategyInterface()
 
-def log(message: str):
-    proc = Gimp.get_pdb().lookup_procedure("gimp-message")
-    config = proc.create_config()
-    config.set_property("message", message)
-    proc.run(config)
+class ProcedureHelper:
+    @staticmethod
+    def call_pdb_procedure(name, properties: list[tuple[str, any]]):
+        proc = Gimp.get_pdb().lookup_procedure(name)
+        config = proc.create_config()
+        for prop_name, prop_value in properties:
+            config.set_property(prop_name, prop_value)
+        proc.run(config)
 
-def create_vbox(parent: Gtk.Container, spacing: int = 0) -> Gtk.Box:
-    box = Gtk.Box.new(Gtk.Orientation.VERTICAL, spacing)
-    if isinstance(parent, Gtk.Window):
-        parent.add(box)
-    else:
-        parent.pack_start(box, True, False, 0)
-    return box
+def log(message):
+    ProcedureHelper.call_pdb_procedure("gimp-message", [("message", message)])
 
-def create_hbox(parent: Gtk.Container, fill: bool = False) -> Gtk.Box:
-    box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-    parent.pack_start(box, fill, fill, 0)
-    return box
+class ZoomHandler:
+    @staticmethod
+    def zoom_in(_: Gtk.Widget, context: PluginContext):
+        context.zoom_level += 0.1
+        update_preview(context, force=True)
 
-def create_label(text: str, parent: Gtk.Container, padding: int = 0) -> Gtk.Label:
-    label = Gtk.Label.new(text)
-    parent.pack_start(label, True, False, padding)
-    return label
+    @staticmethod
+    def zoom_out(_: Gtk.Widget, context: PluginContext):
+        context.zoom_level = max(0.1, context.zoom_level - 0.1)
+        update_preview(context, force=True)
 
-def create_button(label: str, parent: Gtk.Container, padding: int = 0) -> Gtk.Button:
-    btn = Gtk.Button.new_with_label(label)
-    parent.pack_start(btn, True, True, padding)
-    return btn
+    @staticmethod
+    def reset_zoom(_: Gtk.Widget, context: PluginContext):
+        context.zoom_level = 1.0
+        update_preview(context, force=True)
 
-def create_value_input(value: int, parent: Gtk.Container, padding: int = 0) -> Gtk.Entry:
-    input_entry = Gtk.Entry.new()
-    input_entry.set_text(f"{value}")
-    parent.pack_start(input_entry, False, False, padding)
-    return input_entry
+    @staticmethod
+    def zoom_to_fit(_: Gtk.Widget, context: PluginContext):
+        if not context.gtk_ctx.display_box or not context.active_layer_group:
+            return
+        
+        img_w = context.image_ref.get_width()
+        img_h = context.image_ref.get_height()
+        if img_w == 0 or img_h == 0:
+            return
 
-def create_combo(values: list, parent: Gtk.Container, padding: int = 0) -> Gtk.ComboBoxText:
-    combo = Gtk.ComboBoxText.new()
+        alloc = context.gtk_ctx.display_box.get_allocation()
+        margin = 2
+        context.zoom_level = min((alloc.width - margin) / img_w,
+                                 (alloc.height - margin) / img_h)
 
-    for value in values:
-        combo.append_text(value)
-
-    parent.pack_start(combo, False, False, padding)
-    return combo
-
-def create_window(title: str) -> Gtk.Window:
-    window = Gtk.Window.new(Gtk.WindowType.TOPLEVEL)
-    #window.resize(400, 600)
-    window.set_title(title)
-    window.set_keep_above(True)
-    return window
+        # Prevent zoom from being too small
+        context.zoom_level = max(0.1, context.zoom_level)
+        update_preview(context, force=True)
 
 def get_preview_image(image_type,
                       dim: Dim,
@@ -234,18 +280,12 @@ def get_preview_image(image_type,
     # Disable interpolation and zoom the image by scaling
     Gimp.context_set_interpolation(Gimp.InterpolationType.NONE)
     final_layer = gtk_ctx.temp_img.flatten()
-    #pdb.gimp_layer_scale(
-    #    final_layer,
-    #    new_image_dim.width * zoom,
-    #    new_image_dim.height * zoom,
-    #    False)
     gtk_ctx.temp_img.scale(new_image_dim.width * zoom,
                            new_image_dim.height * zoom)
 
     return final_layer
 
-def update_preview(widget: Gtk.Widget, context: PluginContext):
-
+def update_preview(context: PluginContext, force: bool):
     def get_layer_from_image(image: Gimp.Image, name: str) -> Gimp.Layer | None:
         for layer in image.get_layers():
             if layer.get_name() == name:
@@ -299,7 +339,7 @@ def create_layer_select_combo(context: PluginContext, index: int, name_to_select
 
     def update_layer_names(combo: Gtk.ComboBoxText, context: PluginContext, index: int):
         context.layer_names[index] = combo.get_active_text()
-        update_preview(None, context)
+        update_preview(context)
 
     def try_to_select_option(option_to_select, option_list: list, combo: Gtk.ComboBoxText) -> bool:
         if not option_to_select:
@@ -314,7 +354,7 @@ def create_layer_select_combo(context: PluginContext, index: int, name_to_select
     gtk_ctx = context.gtk_ctx
     layer_names = get_image_layer_names(context.image_ref, add_empty=index)
 
-    combo = create_combo(
+    combo = GtkBuilder.create_combo(
         layer_names,
         gtk_ctx.bottom_control_vbox)
     combo.connect(
@@ -328,19 +368,11 @@ def create_layer_select_combo(context: PluginContext, index: int, name_to_select
 
     gtk_ctx.layer_select_combos[index] = combo
 
-def zoom_in(widget: Gtk.Widget, context: PluginContext):
-    context.zoom_level *= 2.0
-    update_preview(None, context)
-
-def zoom_out(widget: Gtk.Widget, context: PluginContext):
-    context.zoom_level /= 2.0
-    update_preview(None, context)
-
 def change_display_mode(widget: Gtk.Widget, context: PluginContext):
     context.mode = widget.get_active_text()
-    update_preview(None, context)
+    update_preview(context)
 
-def refresh_combos(widget: Gtk.Widget, context: PluginContext, count: int):
+def refresh_combos(_: Gtk.Widget, context: PluginContext, count: int):
     names_to_select = ["", ""]
     for index in range(count):
         names_to_select[index] = context.gtk_ctx.layer_select_combos[index].get_active_text()
@@ -358,28 +390,36 @@ def tile_preview_run(procedure, run_mode: Gimp.RunMode, image: Gimp.Image, drawa
     GimpUi.init(plug_in_binary)
     context = PluginContext(image)
 
-    context.gtk_ctx.window = create_window(plug_in_name)
+    context.gtk_ctx.window = GtkBuilder.create_window(plug_in_name)
+    context.gtk_ctx.window.connect("destroy", lambda w: Gtk.main_quit())
+    context.gtk_ctx.window.set_default_size(400, 660)
 
-    window_box = create_vbox(context.gtk_ctx.window)
-    upper_wrap_hbox = create_hbox(window_box)
-    upper_label_vbox = create_vbox(upper_wrap_hbox)
-    upper_control_vbox = create_vbox(upper_wrap_hbox)
+    window_box = GtkBuilder.create_vbox(context.gtk_ctx.window)
+    upper_wrap_hbox = GtkBuilder.create_hbox(window_box)
+    upper_label_vbox = GtkBuilder.create_vbox(upper_wrap_hbox)
+    upper_control_vbox = GtkBuilder.create_vbox(upper_wrap_hbox)
 
-    create_label("Zoom", upper_label_vbox)
-    zoom_btn_box = create_hbox(upper_control_vbox)
-    unzoom_btn = create_button("-", zoom_btn_box)
-    unzoom_btn.connect("clicked", zoom_out, context)
-    zoom_btn = create_button("+", zoom_btn_box)
-    zoom_btn.connect("clicked", zoom_in, context)
+    GtkBuilder.create_label("Zoom", upper_label_vbox)
+    zoom_btn_box = GtkBuilder.create_hbox(upper_control_vbox)
+    unzoom_btn = GtkBuilder.create_button("-", zoom_btn_box)
+    unzoom_btn.connect("clicked", ZoomHandler.zoom_out, context)
+    zoom_btn = GtkBuilder.create_button("+", zoom_btn_box)
+    zoom_btn.connect("clicked", ZoomHandler.zoom_in, context)
 
-    context.gtk_ctx.display_box = create_hbox(window_box, fill=True)
-    bottom_wrap_hbox = create_hbox(window_box)
-    bottom_label_vbox = create_vbox(bottom_wrap_hbox)
-    context.gtk_ctx.bottom_control_vbox = create_vbox(bottom_wrap_hbox)
+    reset_zoom_btn = GtkBuilder.create_button("Reset Zoom", zoom_btn_box)
+    reset_zoom_btn.connect("clicked", ZoomHandler.reset_zoom, context)
+
+    zoom_to_fit_btn = GtkBuilder.create_button("Zoom to Fit", zoom_btn_box)
+    zoom_to_fit_btn.connect("clicked", ZoomHandler.zoom_to_fit, context)
+
+    context.gtk_ctx.display_box = GtkBuilder.create_hbox(window_box, fill=True)
+    bottom_wrap_hbox = GtkBuilder.create_hbox(window_box)
+    bottom_label_vbox = GtkBuilder.create_vbox(bottom_wrap_hbox)
+    context.gtk_ctx.bottom_control_vbox = GtkBuilder.create_vbox(bottom_wrap_hbox)
 
     ### Mode select
-    create_label("Preview mode", bottom_label_vbox)
-    combo = create_combo(RenderMode.get_string_annotations(), context.gtk_ctx.bottom_control_vbox)
+    GtkBuilder.create_label("Preview mode", bottom_label_vbox)
+    combo = GtkBuilder.create_combo(RenderMode.get_string_annotations(), context.gtk_ctx.bottom_control_vbox)
     combo.connect(
         "changed",
         change_display_mode,
@@ -391,15 +431,15 @@ def tile_preview_run(procedure, run_mode: Gimp.RunMode, image: Gimp.Image, drawa
     ### Layers selection
     labels = [ "Primary layer", "Secondary layer" ]
     for label in labels:
-        create_label(label, bottom_label_vbox)
+        GtkBuilder.create_label(label, bottom_label_vbox)
 
     context.skip_next_update = True
     for index in range(len(labels)):
         create_layer_select_combo(context, index)
 
     ## Refresh button
-    refresh_btn_hbox = create_hbox(window_box)
-    refresh_btn = create_button("Refresh", refresh_btn_hbox)
+    refresh_btn_hbox = GtkBuilder.create_hbox(window_box)
+    refresh_btn = GtkBuilder.create_button("Refresh", refresh_btn_hbox)
     refresh_btn.connect(
         "clicked",
         refresh_combos,

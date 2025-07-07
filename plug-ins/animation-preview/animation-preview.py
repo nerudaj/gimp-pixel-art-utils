@@ -126,68 +126,71 @@ class PluginContext:
     def __repr__(self):
         return self.__str__()
 
-def call_pdb_procedure(name, properties: list[tuple[str, any]]):
-    proc = Gimp.get_pdb().lookup_procedure(name)
-    config = proc.create_config()
-    for prop_name, prop_value in properties:
-        config.set_property(prop_name, prop_value)
-    proc.run(config)
+class ProcedureHelper:
+    @staticmethod
+    def call_pdb_procedure(name, properties: list[tuple[str, any]]):
+        proc = Gimp.get_pdb().lookup_procedure(name)
+        config = proc.create_config()
+        for prop_name, prop_value in properties:
+            config.set_property(prop_name, prop_value)
+        proc.run(config)
 
 def log(message):
-    call_pdb_procedure("gimp-message", [("message", message)])
+    ProcedureHelper.call_pdb_procedure("gimp-message", [("message", message)])
 
-def update_fps(widget, fps_entry, context: PluginContext):
+def update_fps(_: Gtk.Widget, fps_entry, context: PluginContext):
     context.playback.update_fps(int(fps_entry.get_text()))
 
-def start_playback(widget, context: PluginContext):
+def start_playback(_: Gtk.Widget, context: PluginContext):
     context.playback.start()
     update_preview(context)
 
-def stop_playback(widget, context: PluginContext):
+def stop_playback(_: Gtk.Widget, context: PluginContext):
     context.playback.stop()
     update_preview(context)
 
-def prev_frame(widget, context: PluginContext):
+def prev_frame(_: Gtk.Widget, context: PluginContext):
     context.playback.prev_frame()
     update_preview(context, force=True)
 
-def next_frame(widget, context: PluginContext):
+def next_frame(_: Gtk.Widget, context: PluginContext):
     context.playback.next_frame()
     update_preview(context, force=True)
 
-def zoom_in(widget, context: PluginContext):
-    context.zoom_level += 0.1
-    update_preview(context, force=True)
+class ZoomHandler:
+    @staticmethod
+    def zoom_in(_: Gtk.Widget, context: PluginContext):
+        context.zoom_level += 0.1
+        update_preview(context, force=True)
 
-def zoom_out(widget, context: PluginContext):
-    context.zoom_level = max(0.1, context.zoom_level - 0.1)
-    update_preview(context, force=True)
+    @staticmethod
+    def zoom_out(_: Gtk.Widget, context: PluginContext):
+        context.zoom_level = max(0.1, context.zoom_level - 0.1)
+        update_preview(context, force=True)
 
-def reset_zoom(widget, context: PluginContext):
-    context.zoom_level = 1.0
-    update_preview(context, force=True)
+    @staticmethod
+    def reset_zoom(_: Gtk.Widget, context: PluginContext):
+        context.zoom_level = 1.0
+        update_preview(context, force=True)
 
-def zoom_to_fit(widget, context: PluginContext):
-    # Try to fit the current frame into the display box area
-    if not context.gtk_ctx.display_box or not context.active_layer_group:
-        return
-    # Get the preview area size
-    alloc = context.gtk_ctx.display_box.get_allocation()
-    preview_w = alloc.width
-    preview_h = alloc.height
-    # Get the image size
-    img_w = context.image_ref.get_width()
-    img_h = context.image_ref.get_height()
-    if img_w == 0 or img_h == 0:
-        return
-    # Compute zoom to fit, with a small margin (e.g. 2px)
-    margin = 2
-    zoom_x = (preview_w - margin) / img_w
-    zoom_y = (preview_h - margin) / img_h
-    context.zoom_level = min(zoom_x, zoom_y)
-    # Prevent zoom from being too small
-    context.zoom_level = max(0.1, context.zoom_level)
-    update_preview(context, force=True)
+    @staticmethod
+    def zoom_to_fit(_: Gtk.Widget, context: PluginContext):
+        if not context.gtk_ctx.display_box or not context.active_layer_group:
+            return
+        
+        img_w = context.image_ref.get_width()
+        img_h = context.image_ref.get_height()
+        if img_w == 0 or img_h == 0:
+            return
+
+        alloc = context.gtk_ctx.display_box.get_allocation()
+        margin = 2
+        context.zoom_level = min((alloc.width - margin) / img_w,
+                                 (alloc.height - margin) / img_h)
+
+        # Prevent zoom from being too small
+        context.zoom_level = max(0.1, context.zoom_level)
+        update_preview(context, force=True)
 
 def update_preview(context: PluginContext, force: bool = False):
     if (force == context.playback.playing):
@@ -302,7 +305,7 @@ def export_clip_to_webp(widget, context: PluginContext):
         )
 
     log(f"DEBUG: Calling file-webp-save procedure. {out_filename}")
-    call_pdb_procedure(
+    ProcedureHelper.call_pdb_procedure(
         "file-webp-export",
         [
             ("image", out_img),
@@ -368,16 +371,16 @@ def animation_preview_run(procedure, run_mode, image, drawables, config, data):
     GtkBuilder.create_label("Zoom:", zoom_label_box)
 
     zoom_out_btn = GtkBuilder.create_button("-", zoom_box)
-    zoom_out_btn.connect("clicked", zoom_out, context)
+    zoom_out_btn.connect("clicked", ZoomHandler.zoom_out, context)
 
     zoom_in_btn = GtkBuilder.create_button("+", zoom_box)
-    zoom_in_btn.connect("clicked", zoom_in, context)
+    zoom_in_btn.connect("clicked", ZoomHandler.zoom_in, context)
 
     reset_zoom_btn = GtkBuilder.create_button("Reset Zoom", zoom_box)
-    reset_zoom_btn.connect("clicked", reset_zoom, context)
+    reset_zoom_btn.connect("clicked", ZoomHandler.reset_zoom, context)
 
     zoom_to_fit_btn = GtkBuilder.create_button("Zoom to Fit", zoom_box)
-    zoom_to_fit_btn.connect("clicked", zoom_to_fit, context)
+    zoom_to_fit_btn.connect("clicked", ZoomHandler.zoom_to_fit, context)
 
     fps_label_box = GtkBuilder.create_hbox(labels_vbox, True)
     fps_controls_box = GtkBuilder.create_hbox(controls_vbox, False)
