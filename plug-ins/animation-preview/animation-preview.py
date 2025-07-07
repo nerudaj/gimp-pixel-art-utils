@@ -156,11 +156,11 @@ def next_frame(widget, context: PluginContext):
     update_preview(context, force=True)
 
 def zoom_in(widget, context: PluginContext):
-    context.zoom_level *= 2.0
+    context.zoom_level += 0.1
     update_preview(context, force=True)
 
 def zoom_out(widget, context: PluginContext):
-    context.zoom_level /= 2.0
+    context.zoom_level = max(0.1, context.zoom_level - 0.1)
     update_preview(context, force=True)
 
 def update_preview(context: PluginContext, force: bool = False):
