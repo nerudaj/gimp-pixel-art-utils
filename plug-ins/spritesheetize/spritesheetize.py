@@ -63,13 +63,13 @@ class ExportOptions:
                  offset: Vector2d,
                  spacing: Vector2d,
                  upscale_factor: int,
-                 invert_clips: bool,
+                 invert_order: bool,
                  enforce_tiles_per_row: bool,
                  enforced_column_count: int):
         self.offset = offset
         self.spacing = spacing
         self.scaling_factor = upscale_factor
-        self.invert_clips = invert_clips
+        self.invert_order = invert_order
         self.enforce_tiles_per_row = enforce_tiles_per_row
         self.enforced_column_count = enforced_column_count
 
@@ -182,7 +182,8 @@ def tilesetize(image: Gimp.Image,
     for idx in range(0, len(layers)):
         columnIdx = idx % tiles_per_row
         rowIdx = math.floor(idx / tiles_per_row)
-        copy_layer_to_image(layers[idx],
+        layerIdx = len(layers) - 1 - idx if options.invert_order else idx
+        copy_layer_to_image(layers[layerIdx],
                             out_image,
                             options.offset.x + columnIdx * (image.get_width() + options.spacing.x),
                             options.offset.y + rowIdx * (image.get_height() + options.spacing.y))
@@ -282,7 +283,7 @@ def spritify_run(procedure: Gimp.Procedure,
                             Vector2d(config.get_property("xspacing"),
                                      config.get_property("yspacing")),
                             config.get_property("upscale-factor"),
-                            False, # Invert clips
+                            config.get_property("invert-order"),
                             config.get_property("enforce-row-count"),
                             config.get_property("enforced-tiles-per-row"))
 
@@ -400,6 +401,12 @@ class Spritify (Gimp.PlugIn):
                                        16,
                                        0,
                                        GObject.ParamFlags.READWRITE)
+
+        procedure.add_boolean_aux_argument("invert-order",
+                                           "Export in inverted order",
+                                           None,
+                                           False,
+                                           GObject.ParamFlags.READWRITE)
 
         return procedure
 
