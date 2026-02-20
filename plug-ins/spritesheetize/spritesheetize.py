@@ -133,7 +133,7 @@ def export_spritesheet_annotations(filename: str,
     annotation = {
         "defaults": {
             "frame": frame_size.get_scaled(options.scaling_factor).to_json_dim(),
-            "spacing": frame_size.get_scaled(options.scaling_factor).to_json_dist(),
+            "spacing": options.spacing.get_scaled(options.scaling_factor).to_json_dist(),
         },
         "states": []
     }
