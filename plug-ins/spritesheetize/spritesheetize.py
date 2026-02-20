@@ -252,8 +252,10 @@ def spritesheetize(image: Gimp.Image,
     for rowIdx in range(len(fitted_groups)):
         columnIdx = 0
         for group in fitted_groups[rowIdx]:
-            for layer in group.get_children():
-                copy_layer_to_image(layer,
+            layers = group.get_children()
+            for idx in range(0, len(layers)):
+                layerIdx = len(layers) - 1 - idx if options.invert_order else idx
+                copy_layer_to_image(layers[layerIdx],
                                     out_image,
                                     options.offset.x + columnIdx * (image.get_width() + options.spacing.x),
                                     options.offset.y + rowIdx * (image.get_height() + options.spacing.y))
